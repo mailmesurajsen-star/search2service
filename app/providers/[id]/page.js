@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import { FileUploader } from '@/components/file-uploader';
 import {
   ChevronLeft, MapPin, Star, ShieldCheck, Phone, MessageCircle, Mail, Globe, Clock, IndianRupee,
   Award, CheckCircle2, Calendar, User, Send
@@ -19,7 +20,7 @@ export default function ProviderPage() {
   const router = useRouter();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [reviewForm, setReviewForm] = useState({ userName: '', rating: 5, comment: '' });
+  const [reviewForm, setReviewForm] = useState({ userName: '', rating: 5, comment: '', photos: [] });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export default function ProviderPage() {
     setSubmitting(false);
     if (res.ok) {
       toast.success('Thanks for your review!');
-      setReviewForm({ userName: '', rating: 5, comment: '' });
+      setReviewForm({ userName: '', rating: 5, comment: '', photos: [] });
       const d = await fetch(`/api/providers/${id}`).then(r => r.json()); setData(d);
     } else toast.error('Failed to submit');
   };
@@ -149,6 +150,17 @@ export default function ProviderPage() {
                     ))}
                   </div>
                   <Textarea placeholder="Share your experience..." value={reviewForm.comment} onChange={e => setReviewForm({ ...reviewForm, comment: e.target.value })} rows={3} />
+                  <div>
+                    <div className="text-xs text-slate-500 mb-2">Add photos (optional)</div>
+                    <FileUploader
+                      context="review-photo"
+                      providerId={id}
+                      multiple
+                      accept="image/jpeg,image/png,image/webp"
+                      buttonLabel="Add photos to your review"
+                      onUploaded={(files) => setReviewForm(f => ({ ...f, photos: [...(f.photos || []), ...(Array.isArray(files) ? files : [files])].map(x => x.url) }))}
+                    />
+                  </div>
                   <Button onClick={submitReview} disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white"><Send className="w-4 h-4 mr-2" />{submitting ? 'Submitting...' : 'Submit Review'}</Button>
                 </div>
               </CardContent></Card>
@@ -165,6 +177,15 @@ export default function ProviderPage() {
                       </div>
                       <div className="flex mt-0.5">{[...Array(5)].map((_, i) => <Star key={i} className={`w-3.5 h-3.5 ${i < r.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200'}`} />)}</div>
                       <p className="text-slate-700 text-sm mt-1">{r.comment}</p>
+                      {r.photos?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {r.photos.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer">
+                              <img src={url} alt="review" className="w-16 h-16 object-cover rounded border hover:scale-105 transition-transform" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent></Card>

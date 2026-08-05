@@ -93,6 +93,7 @@ export default function App() {
             <Link href="/search?category=hotel" className="hover:text-blue-600">Hotels</Link>
             <Link href="/search?group=Job+%26+Career" className="hover:text-blue-600">Jobs</Link>
             <Link href="/search?group=Government+Services" className="hover:text-blue-600">Gov Services</Link>
+            <Link href="/upload" className="hover:text-blue-600">Upload</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Login</Button>

@@ -106,6 +106,61 @@ user_problem_statement: |
   Build Search2Service - a full-stack local services marketplace (Justdial + Urban Company + Practo + IndiaMART + Job Portal in one). Phase 1 delivers the aha moment: beautiful landing page with search, 80+ categories, providers listing/search, provider detail with reviews, doctors, hotels, restaurants, jobs, government services, testimonials. Tech: Next.js 15 + MongoDB (adjusted from MySQL). No auth yet, no payments yet - those are future phases.
 
 backend:
+  - task: "POST /api/uploads (multipart to GridFS) + GET /api/files/:id + GET /api/media"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Media storage using MongoDB GridFS (bucket=uploads). Uploads accept multipart form with 'file' field, optional 'context', 'providerId', 'ownerId' metadata. Validates MIME type (JPEG/PNG/WebP/GIF/PDF/MP4/WebM/MOV) and 10MB size limit. Returns {ok, id (uuid), fileId (ObjectId hex), url, mimeType, size, originalName, context, providerId, createdAt}. GET /api/files/:id validates ObjectId, streams file from GridFS with Content-Type, Content-Length, Cache-Control immutable, X-Content-Type-Options nosniff. GET /api/media lists uploaded media with filters providerId/context/ownerId. Also POST /api/reviews now accepts photos array (URLs) that gets persisted with the review.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ COMPREHENSIVE TESTING COMPLETE - 13/14 tests passed. All core functionality working correctly.
+          
+          UPLOAD TESTS (POST /api/uploads):
+          ✅ JPEG upload → 201 with correct response structure (ok, id, fileId, url, mimeType, size, originalName, context, providerId, createdAt)
+          ✅ PDF upload → 201 with correct response
+          ✅ Unsupported .txt file → 415 "Unsupported file type: text/plain"
+          ✅ Missing file field → 400 "file is required"
+          ✅ 11 MB file → 413 "File exceeds 10 MB limit"
+          ✅ fileId is 24-char hex ObjectId format
+          ✅ Metadata (context, providerId, ownerId) correctly stored
+          
+          DOWNLOAD TESTS (GET /api/files/:id):
+          ✅ Valid fileId → 200 with correct file content
+          ✅ Content-Type: image/jpeg (matches uploaded MIME)
+          ✅ Content-Length: matches uploaded size
+          ✅ Content-Disposition: inline; filename="..." present
+          ✅ X-Content-Type-Options: nosniff present
+          ✅ Body bytes match uploaded size
+          ✅ Invalid ObjectId → 400 "Invalid file id"
+          ✅ Non-existent ObjectId → 404
+          Minor: Cache-Control header is "no-store, no-cache, must-revalidate" instead of "public, max-age=31536000, immutable" due to Next.js dynamic route behavior. This is a caching optimization issue, not a functional bug. Files are served correctly.
+          
+          MEDIA LIST TESTS (GET /api/media):
+          ✅ No filter → returns items array with all uploaded media
+          ✅ ?context=review-photo → filters correctly
+          ✅ ?providerId=test-provider-123 → filters correctly
+          ✅ ?ownerId=test-user-456 → filters correctly
+          ✅ Response structure correct: {items: [...]}
+          ✅ Each item has: id, fileId, url, mimeType, size, originalName, context, providerId, createdAt
+          ✅ No _id or ObjectId leaks in response
+          
+          REVIEW INTEGRATION TESTS (POST /api/reviews with photos):
+          ✅ Upload 3 photos → all successful
+          ✅ Create review with photos array → 200 with photos persisted
+          ✅ Fetch provider detail → review includes photos array intact
+          ✅ Photos array with 8 URLs → truncated to 6 as expected
+          ✅ Photos URLs correctly stored and retrieved
+          
+          All critical functionality working. The Cache-Control header issue is minor and does not affect file upload/download functionality.
+
   - task: "Auto-seed database on first API request"
     implemented: true
     working: true
@@ -276,6 +331,8 @@ test_plan:
     []
   test_all: false
   test_priority: "high_first"
+  current_focus_new:
+    - "POST /api/uploads (multipart to GridFS) + GET /api/files/:id + GET /api/media"
 
 agent_communication:
   - agent: "main"
@@ -348,3 +405,49 @@ agent_communication:
       RESOLUTION: After clearing .next cache, restarting server, and hard refresh in browser, NO hydration errors detected.
       
       The hydration error fix is CONFIRMED WORKING. Issue was browser cache, not code.
+
+  - agent: "testing"
+    message: |
+      🎉 MEDIA UPLOAD & GRIDFS TESTING COMPLETE - ALL CRITICAL FUNCTIONALITY WORKING!
+      
+      Tested new file upload/media storage feature using MongoDB GridFS. Test results: 13/14 tests passed.
+      
+      ✅ POST /api/uploads - ALL SCENARIOS WORKING:
+      • JPEG upload → 201 with correct response structure (ok, id, fileId, url, mimeType, size, originalName, context, providerId, createdAt)
+      • PDF upload → 201 with correct response
+      • Unsupported .txt file → 415 "Unsupported file type: text/plain" ✓
+      • Missing file field → 400 "file is required" ✓
+      • 11 MB file → 413 "File exceeds 10 MB limit" ✓
+      • fileId is 24-char hex ObjectId format ✓
+      • Metadata (context, providerId, ownerId) correctly stored and returned ✓
+      
+      ✅ GET /api/files/:id - FILE DOWNLOAD WORKING:
+      • Valid fileId → 200 with correct file content ✓
+      • Content-Type matches uploaded MIME type ✓
+      • Content-Length matches uploaded size ✓
+      • Content-Disposition: inline; filename="..." present ✓
+      • X-Content-Type-Options: nosniff present ✓
+      • Body bytes match uploaded size ✓
+      • Invalid ObjectId → 400 "Invalid file id" ✓
+      • Non-existent ObjectId → 404 ✓
+      
+      ✅ GET /api/media - MEDIA LIST WITH FILTERS WORKING:
+      • No filter → returns items array with all uploaded media ✓
+      • ?context=review-photo → filters correctly ✓
+      • ?providerId=test-provider-123 → filters correctly ✓
+      • ?ownerId=test-user-456 → filters correctly ✓
+      • Response structure: {items: [...]} ✓
+      • Each item has all required fields (id, fileId, url, mimeType, size, originalName, context, providerId, createdAt) ✓
+      • No _id or ObjectId leaks in response ✓
+      
+      ✅ POST /api/reviews WITH PHOTOS - INTEGRATION WORKING:
+      • Upload 3 photos → all successful ✓
+      • Create review with photos array → 200 with photos persisted ✓
+      • Fetch provider detail → review includes photos array intact ✓
+      • Photos array with 8 URLs → truncated to 6 as expected ✓
+      • Photos URLs correctly stored and retrieved ✓
+      
+      ⚠️ MINOR ISSUE (NOT CRITICAL):
+      Cache-Control header for GET /api/files/:id returns "no-store, no-cache, must-revalidate" instead of "public, max-age=31536000, immutable". This is due to Next.js's `dynamic = 'force-dynamic'` setting in route.js which overrides custom Cache-Control headers. This is a caching optimization issue, NOT a functional bug. Files are served correctly with all other headers intact.
+      
+      CONCLUSION: All critical file upload/download/media functionality is working correctly. The Cache-Control issue is minor and does not affect core functionality.

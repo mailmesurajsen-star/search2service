@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/mongodb';
+import { getDb, getFilesBucket } from '@/lib/mongodb';
 import { buildCategories, buildProviders, buildReviews, buildJobs } from '@/lib/seed-data';
 import { v4 as uuid } from 'uuid';
+import { ObjectId } from 'mongodb';
+
+const MAX_UPLOAD = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_MIME = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'application/pdf': '.pdf',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+};
 
 async function ensureSeed() {
   const db = await getDb();
@@ -34,6 +47,96 @@ async function handle(request, ctx) {
   try {
     await ensureSeed();
     const db = await getDb();
+
+    // POST /api/uploads - multipart file upload via GridFS
+    if (path === 'uploads' && method === 'POST') {
+      const form = await request.formData();
+      const value = form.get('file');
+      if (!value || typeof value.arrayBuffer !== 'function') {
+        return NextResponse.json({ error: 'file is required' }, { status: 400 });
+      }
+      if (!ALLOWED_MIME[value.type]) {
+        return NextResponse.json({ error: `Unsupported file type: ${value.type}` }, { status: 415 });
+      }
+      if (value.size <= 0 || value.size > MAX_UPLOAD) {
+        return NextResponse.json({ error: 'File exceeds 10 MB limit' }, { status: 413 });
+      }
+      const bytes = Buffer.from(await value.arrayBuffer());
+      const safeName = `${uuid()}${ALLOWED_MIME[value.type]}`;
+      const bucket = await getFilesBucket();
+      const upload = bucket.openUploadStream(safeName, {
+        contentType: value.type,
+        metadata: {
+          originalName: (value.name || 'file').slice(0, 200),
+          declaredMimeType: value.type,
+          size: value.size,
+          ownerId: form.get('ownerId') || 'anonymous',
+          context: form.get('context') || 'general', // e.g. "provider-gallery", "review-photo"
+          providerId: form.get('providerId') || null,
+        },
+      });
+      await new Promise((resolve, reject) => {
+        upload.once('finish', resolve);
+        upload.once('error', reject);
+        upload.end(bytes);
+      });
+      const fileId = String(upload.id);
+      const media = {
+        id: uuid(),
+        fileId,
+        originalName: (value.name || 'file').slice(0, 200),
+        mimeType: value.type,
+        size: value.size,
+        url: `/api/files/${fileId}`,
+        ownerId: form.get('ownerId') || 'anonymous',
+        context: form.get('context') || 'general',
+        providerId: form.get('providerId') || null,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection('media').insertOne({ ...media });
+      return NextResponse.json({ ok: true, ...media }, { status: 201 });
+    }
+
+    // GET /api/files/:id - stream file from GridFS
+    if (path.startsWith('files/') && method === 'GET') {
+      const id = path.split('/')[1];
+      if (!ObjectId.isValid(id)) {
+        return NextResponse.json({ error: 'Invalid file id' }, { status: 400 });
+      }
+      const fileId = new ObjectId(id);
+      const meta = await db.collection('uploads.files').findOne({ _id: fileId });
+      if (!meta) return new Response('Not found', { status: 404 });
+      const bucket = await getFilesBucket();
+      const nodeStream = bucket.openDownloadStream(fileId);
+      // Convert Node Readable to Web ReadableStream
+      const webStream = new ReadableStream({
+        start(controller) {
+          nodeStream.on('data', (chunk) => controller.enqueue(new Uint8Array(chunk)));
+          nodeStream.on('end', () => controller.close());
+          nodeStream.on('error', (err) => controller.error(err));
+        },
+        cancel() { nodeStream.destroy(); },
+      });
+      return new Response(webStream, {
+        headers: {
+          'Content-Type': meta.contentType || 'application/octet-stream',
+          'Content-Length': String(meta.length),
+          'Content-Disposition': `inline; filename="${String(meta.metadata?.originalName || meta.filename).replace(/["\\\r\n]/g, '_')}"`,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
+
+    // GET /api/media?providerId=&context= - list uploaded media
+    if (path === 'media' && method === 'GET') {
+      const filter = {};
+      if (q.providerId) filter.providerId = q.providerId;
+      if (q.context) filter.context = q.context;
+      if (q.ownerId) filter.ownerId = q.ownerId;
+      const items = await db.collection('media').find(filter).sort({ createdAt: -1 }).limit(100).toArray();
+      return NextResponse.json({ items: items.map(clean) });
+    }
 
     // GET /api/health
     if (path === 'health' && method === 'GET') {
@@ -165,6 +268,7 @@ async function handle(request, ctx) {
         userName: body.userName || 'Anonymous',
         rating: Math.max(1, Math.min(5, parseInt(body.rating) || 5)),
         comment: body.comment || '',
+        photos: Array.isArray(body.photos) ? body.photos.slice(0, 6) : [],
         createdAt: new Date().toISOString(),
       };
       await db.collection('reviews').insertOne(doc);
@@ -186,4 +290,5 @@ export const GET = handle;
 export const POST = handle;
 export const PUT = handle;
 export const DELETE = handle;
+export const HEAD = handle;
 export const dynamic = 'force-dynamic';
