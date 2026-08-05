@@ -468,7 +468,8 @@ function ProviderCard({ p }) {
   const router = useRouter();
   const go = () => router.push(`/providers/${p.id}`);
   return (
-    <Card onClick={go} className="h-full hover:shadow-xl transition-all group overflow-hidden cursor-pointer">
+    <div onClick={go} className="cursor-pointer h-full">
+    <Card className="h-full hover:shadow-xl transition-all group overflow-hidden">
       <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }}>
         {p.premium && <Badge className="absolute top-3 left-3 bg-orange-500 hover:bg-orange-500">PREMIUM</Badge>}
         {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-emerald-600" /></div>}
@@ -488,6 +489,7 @@ function ProviderCard({ p }) {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }
 
