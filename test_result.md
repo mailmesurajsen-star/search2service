@@ -1,0 +1,297 @@
+#====================================================================================================
+# START - Testing Protocol - DO NOT EDIT OR REMOVE THIS SECTION
+#====================================================================================================
+
+# THIS SECTION CONTAINS CRITICAL TESTING INSTRUCTIONS FOR BOTH AGENTS
+# BOTH MAIN_AGENT AND TESTING_AGENT MUST PRESERVE THIS ENTIRE BLOCK
+
+# Communication Protocol:
+# If the `testing_agent` is available, main agent should delegate all testing tasks to it.
+#
+# You have access to a file called `test_result.md`. This file contains the complete testing state
+# and history, and is the primary means of communication between main and the testing agent.
+#
+# Main and testing agents must follow this exact format to maintain testing data. 
+# The testing data must be entered in yaml format Below is the data structure:
+# 
+## user_problem_statement: {problem_statement}
+## backend:
+##   - task: "Task name"
+##     implemented: true
+##     working: true  # or false or "NA"
+##     file: "file_path.py"
+##     stuck_count: 0
+##     priority: "high"  # or "medium" or "low"
+##     needs_retesting: false
+##     status_history:
+##         -working: true  # or false or "NA"
+##         -agent: "main"  # or "testing" or "user"
+##         -comment: "Detailed comment about status"
+##
+## frontend:
+##   - task: "Task name"
+##     implemented: true
+##     working: true  # or false or "NA"
+##     file: "file_path.js"
+##     stuck_count: 0
+##     priority: "high"  # or "medium" or "low"
+##     needs_retesting: false
+##     status_history:
+##         -working: true  # or false or "NA"
+##         -agent: "main"  # or "testing" or "user"
+##         -comment: "Detailed comment about status"
+##
+## metadata:
+##   created_by: "main_agent"
+##   version: "1.0"
+##   test_sequence: 0
+##   run_ui: false
+##
+## test_plan:
+##   current_focus:
+##     - "Task name 1"
+##     - "Task name 2"
+##   stuck_tasks:
+##     - "Task name with persistent issues"
+##   test_all: false
+##   test_priority: "high_first"  # or "sequential" or "stuck_first"
+##
+## agent_communication:
+##     -agent: "main"  # or "testing" or "user"
+##     -message: "Communication message between agents"
+
+# Protocol Guidelines for Main agent
+#
+# 1. Update Test Result File Before Testing:
+#    - Main agent must always update the `test_result.md` file before calling the testing agent
+#    - Add implementation details to the status_history
+#    - Set `needs_retesting` to true for tasks that need testing
+#    - Update the `test_plan` section to guide testing priorities
+#    - Add a message to `agent_communication` explaining what you've done
+#
+# 2. Incorporate User Feedback:
+#    - When a user provides feedback that something is or isn't working, add this information to the relevant task's status_history
+#    - Update the working status based on user feedback
+#    - If a user reports an issue with a task that was marked as working, increment the stuck_count
+#    - Whenever user reports issue in the app, if we have testing agent and task_result.md file so find the appropriate task for that and append in status_history of that task to contain the user concern and problem as well 
+#
+# 3. Track Stuck Tasks:
+#    - Monitor which tasks have high stuck_count values or where you are fixing same issue again and again, analyze that when you read task_result.md
+#    - For persistent issues, use websearch tool to find solutions
+#    - Pay special attention to tasks in the stuck_tasks list
+#    - When you fix an issue with a stuck task, don't reset the stuck_count until the testing agent confirms it's working
+#
+# 4. Provide Context to Testing Agent:
+#    - When calling the testing agent, provide clear instructions about:
+#      - Which tasks need testing (reference the test_plan)
+#      - Any authentication details or configuration needed
+#      - Specific test scenarios to focus on
+#      - Any known issues or edge cases to verify
+#
+# 5. Call the testing agent with specific instructions referring to test_result.md
+#
+# IMPORTANT: Main agent must ALWAYS update test_result.md BEFORE calling the testing agent, as it relies on this file to understand what to test next.
+
+#====================================================================================================
+# END - Testing Protocol - DO NOT EDIT OR REMOVE THIS SECTION
+#====================================================================================================
+
+
+
+#====================================================================================================
+# Testing Data - Main Agent and testing sub agent both should log testing data below this section
+#====================================================================================================
+
+user_problem_statement: |
+  Build Search2Service - a full-stack local services marketplace (Justdial + Urban Company + Practo + IndiaMART + Job Portal in one). Phase 1 delivers the aha moment: beautiful landing page with search, 80+ categories, providers listing/search, provider detail with reviews, doctors, hotels, restaurants, jobs, government services, testimonials. Tech: Next.js 15 + MongoDB (adjusted from MySQL). No auth yet, no payments yet - those are future phases.
+
+backend:
+  - task: "Auto-seed database on first API request"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "ensureSeed() runs on every request, inserts 84 categories, ~327 providers (including doctors), reviews, jobs if empty. Verified via curl - 327 providers, 84 categories, 38 doctors, 832 reviews inserted."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Database auto-seeds correctly. GET /api/stats confirms: 327 providers, 38 doctors, 832 reviews, 84 categories seeded successfully. All subsequent API calls work with seeded data."
+
+  - task: "GET /api/health, /api/stats, /api/categories, /api/locations"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Basic endpoints - health check, aggregate stats, categories (with popular=true and grouped=true modifiers), locations (states/districts/cities/areas)."
+
+  - task: "GET /api/providers - search & filter with query params"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Supports filters: category, group, state, district, city, area, premium, verified, q (full-text via regex on name/description/services/categoryName), sort (featured/rating/newest), limit, skip. Returns items + total."
+
+  - task: "GET /api/providers/:id - provider detail with reviews & similar"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Returns provider, up to 20 reviews sorted by date, 4 similar providers in same category."
+
+  - task: "GET /api/doctors, /api/hotels, /api/restaurants, /api/gov-services, /api/jobs"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Convenience endpoints for home page sections. All return items array."
+
+  - task: "GET /api/reviews/recent and POST /api/reviews"
+    implemented: true
+    working: "NA"
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Recent 4+ star testimonials with provider info attached. POST adds a new review and recalculates provider rating aggregate."
+
+frontend:
+  - task: "Home page - hero, search, categories, featured providers, doctors, hotels, jobs, testimonials, footer"
+    implemented: true
+    working: true
+    file: "/app/app/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Full landing page rendered and verified via screenshot. Not yet tested via automated frontend agent - awaiting user permission."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Home page loads correctly with all sections visible (hero, popular services, browse by category, premium providers, featured doctors, hotels, restaurants, government services, jobs, customer reviews, download app, FAQ, footer). Layout is intact with no regressions."
+
+  - task: "Search page with filters and sort"
+    implemented: true
+    working: true
+    file: "/app/app/search/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Search page loads correctly and displays results (tested with category=doctor, showing 8 results). Filters sidebar is visible, sort dropdown works, result cards display properly with Call and WhatsApp buttons."
+
+  - task: "Provider detail page (banner, tabs, reviews, book appointment for doctors)"
+    implemented: true
+    working: "NA"
+    file: "/app/app/providers/[id]/page.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+      - working: "NA"
+        agent: "testing"
+        comment: "Not tested in this session - focus was on hydration error fix verification."
+
+  - task: "Categories browse page"
+    implemented: true
+    working: "NA"
+    file: "/app/app/categories/page.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+      - working: "NA"
+        agent: "testing"
+        comment: "Not tested in this session - focus was on hydration error fix verification."
+
+  - task: "Fix React hydration error - nested <a> tags in ProviderCard"
+    implemented: true
+    working: false
+    file: "/app/app/page.js, /app/app/search/page.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Applied fix: Removed outer <Link> wrapper from ProviderCard and search result cards. Added onClick handler to Card component with router.push. Call and WhatsApp buttons have stopPropagation to prevent card click."
+      - working: false
+        agent: "testing"
+        comment: "✅ PRIMARY GOAL ACHIEVED: Hydration error is FIXED - no console errors about nested <a> tags. ❌ NEW ISSUE: Card onClick navigation does NOT work. The shadcn Card component does not forward onClick prop by default, so clicking the card body does not navigate to provider detail page. Call and WhatsApp buttons work correctly (trigger tel:/wa.me links without navigating). RECOMMENDATION: Wrap Card content in a clickable div with onClick, or modify Card component to accept and forward onClick prop."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Fix React hydration error - nested <a> tags in ProviderCard"
+  stuck_tasks:
+    - "Fix React hydration error - nested <a> tags in ProviderCard"
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Phase 1 MVP complete. All Search2Service backend APIs are live and MongoDB auto-seeded with 84 categories, 327 providers, 38 doctors, 832 reviews, 25 jobs. Please test all backend endpoints for correctness, especially search filters, sort options, POST /api/reviews (which also updates provider aggregate rating), and detail endpoint with reviews+similar. Base URL: use relative /api paths via NEXT_PUBLIC_BASE_URL.
+  - agent: "main"
+    message: |
+      BUG FIX: User reported "error fix karo". Root cause was React hydration error - `<a>` tags nested inside `<Link>` (which is also `<a>`) in ProviderCard on home page (/app/app/page.js) and search results card in /app/app/search/page.js. The tel: and wa.me links were causing invalid HTML nesting. Fixed by removing outer `<Link>` wrapper and using `onClick={() => router.push(...)}` on the Card component instead, keeping the inner tel: and WhatsApp `<a>` tags as first-class anchors. Please verify: (1) Home page loads without console hydration errors, (2) Clicking a Premium Provider card navigates to /providers/[id], (3) Clicking the "Call" or "WhatsApp" buttons inside the card does NOT navigate to the provider page but triggers tel:/wa.me instead, (4) Same behavior on /search page's result cards, (5) No visible layout regressions on home or search page.
+  - agent: "testing"
+    message: |
+      HYDRATION ERROR FIX VERIFICATION COMPLETE:
+      ✅ PRIMARY GOAL ACHIEVED: The hydration error is completely FIXED. No console errors about nested <a> tags detected.
+      ✅ Home page loads correctly with all sections intact
+      ✅ Search page loads and displays results correctly
+      ✅ Call buttons work correctly (trigger tel: links, do not navigate to provider page)
+      ✅ WhatsApp buttons work correctly (trigger wa.me links, do not navigate to provider page)
+      
+      ❌ NEW ISSUE DISCOVERED: Card body click navigation is BROKEN
+      - The shadcn Card component does not forward the onClick prop by default
+      - Clicking anywhere on the card body (except Call/WhatsApp buttons) does NOT navigate to provider detail page
+      - This affects both home page Premium Providers section and search results page
+      
+      RECOMMENDATION: Fix card click navigation by either:
+      1. Wrapping Card content in a clickable div with onClick handler
+      2. Modifying the Card component to accept and forward onClick prop
+      3. Using a different approach (e.g., making the entire card a button or using a wrapper element)
+      
+      Files to fix: /app/app/page.js (ProviderCard component) and /app/app/search/page.js (search result cards)
