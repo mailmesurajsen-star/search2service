@@ -3,6 +3,20 @@ import { getDb, getFilesBucket } from '@/lib/mongodb';
 import { buildCategories, buildProviders, buildReviews, buildJobs } from '@/lib/seed-data';
 import { v4 as uuid } from 'uuid';
 import { ObjectId } from 'mongodb';
+import { LlmChat, UserMessage } from 'emergentintegrations';
+
+const SYSTEM_PROMPT = `You are Search2Service Assistant, a friendly AI concierge for India's complete local-services marketplace (like Justdial + Urban Company + Practo + IndiaMART).
+
+Your job: help users find trusted local service providers — doctors, electricians, plumbers, beauticians, photographers, hotels, restaurants, tuition, government-form-fillers, and more — across India.
+
+Rules:
+- Be concise, warm, and use simple English with occasional Hindi words when it fits.
+- When provider records are given in the prompt context, treat them as the SOURCE OF TRUTH — quote real names, cities, ratings, and phone numbers from that list only.
+- If no matching provider records were passed, ask one clarifying question (e.g., city, area, budget, urgency) — do NOT invent providers.
+- Format provider suggestions as a short readable list with name, category, rating, area/city, and phone/WhatsApp. Include a hint like "Tap the card on the site to book / view details."
+- For medical questions: give safe general info and ALWAYS recommend consulting a qualified doctor. For emergencies say "Call 108 (Ambulance) or the nearest hospital immediately."
+- Never fabricate prices, availability, or credentials.
+- Answer in the same language the user writes in (English or Hindi).`;
 
 const MAX_UPLOAD = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_MIME = {
@@ -47,6 +61,77 @@ async function handle(request, ctx) {
   try {
     await ensureSeed();
     const db = await getDb();
+
+    // POST /api/chat - AI concierge (Gemini via Emergent Universal Key)
+    if (path === 'chat' && method === 'POST') {
+      const body = await request.json();
+      const message = String(body.message || '').trim().slice(0, 4000);
+      if (!message) return NextResponse.json({ error: 'message is required' }, { status: 400 });
+      const sessionId = body.sessionId || uuid();
+
+      // Ground the model with real provider records from MongoDB
+      const lower = message.toLowerCase();
+      const allCats = await db.collection('categories').find({}, { projection: { name:1, slug:1, group:1, _id:0 } }).toArray();
+      const matchedCats = allCats.filter(c => {
+        const n = c.name.toLowerCase();
+        return n.length >= 3 && lower.includes(n.toLowerCase());
+      }).slice(0, 3);
+      const allCities = [...new Set((await db.collection('providers').find({}, { projection: { city:1, state:1, _id:0 } }).toArray()).map(p => p.city))];
+      const matchedCity = allCities.find(c => lower.includes(c.toLowerCase()));
+
+      const providerFilter = {};
+      if (matchedCats.length) providerFilter.categorySlug = { $in: matchedCats.map(c => c.slug) };
+      if (matchedCity) providerFilter.city = matchedCity;
+      let providers = [];
+      if (matchedCats.length || matchedCity) {
+        providers = await db.collection('providers').find(providerFilter).sort({ premium: -1, rating: -1 }).limit(6).toArray();
+      }
+      const groundedContext = providers.length
+        ? `\n\nMATCHED PROVIDER RECORDS (from Search2Service database — cite these):\n${JSON.stringify(providers.map(p => ({ id: p.id, name: p.name, category: p.categoryName, area: p.area, city: p.city, state: p.state, rating: p.rating, reviews: p.reviewCount, phone: p.phone, whatsapp: p.whatsapp, fees: p.fees, specialization: p.specialization, url: `/providers/${p.id}` })), null, 2)}`
+        : `\n\nNo provider records matched this turn. If the user is asking for a service, politely ask for clarification (which city, what exactly they need) so we can search our database of 300+ providers across 84 categories in 10 Indian cities.`;
+
+      try {
+        // Load prior turns from MongoDB for multi-turn context
+        const priorTurns = await db.collection('chat_messages').find({ sessionId }).sort({ createdAt: 1 }).limit(20).toArray();
+        const initialMessages = [
+          { role: 'system', content: SYSTEM_PROMPT + groundedContext },
+          ...priorTurns.map(m => ({ role: m.role, content: m.text })),
+        ];
+
+        const chat = new LlmChat(
+          process.env.EMERGENT_LLM_KEY,
+          sessionId,
+          SYSTEM_PROMPT + groundedContext,
+          initialMessages,
+        )
+          .withModel('gemini', process.env.GEMINI_MODEL || 'gemini-2.5-flash')
+          .withParams({ temperature: 0.4, max_tokens: 800 });
+
+        const answer = await chat.sendMessage(new UserMessage({ text: message }));
+
+        const now = new Date();
+        await db.collection('chat_messages').insertMany([
+          { id: uuid(), sessionId, role: 'user', text: message, createdAt: now.toISOString() },
+          { id: uuid(), sessionId, role: 'assistant', text: answer, createdAt: new Date().toISOString(), providerIds: providers.map(p => p.id) },
+        ]);
+
+        return NextResponse.json({
+          sessionId,
+          answer,
+          providers: providers.map(p => ({ id: p.id, name: p.name, category: p.categoryName, city: p.city, area: p.area, rating: p.rating, image: p.images?.[0], url: `/providers/${p.id}` })),
+        });
+      } catch (err) {
+        console.error('chat_error', err?.message || err);
+        return NextResponse.json({ error: 'AI service temporarily unavailable', detail: err?.message }, { status: 503 });
+      }
+    }
+
+    // GET /api/chat/:sessionId - fetch chat history
+    if (path.startsWith('chat/') && method === 'GET') {
+      const sessionId = path.split('/')[1];
+      const msgs = await db.collection('chat_messages').find({ sessionId }).sort({ createdAt: 1 }).limit(200).toArray();
+      return NextResponse.json({ items: msgs.map(clean) });
+    }
 
     // POST /api/uploads - multipart file upload via GridFS
     if (path === 'uploads' && method === 'POST') {

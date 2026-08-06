@@ -749,6 +749,294 @@ def test_post_review():
     
     return all(results)
 
+
+def test_chat_basic_message():
+    """Test POST /api/chat with message (no sessionId) - expect 200 with sessionId, answer, providers"""
+    print("\n=== Testing POST /api/chat - Basic message (no sessionId) ===")
+    
+    try:
+        payload = {"message": "Hello, I need help finding a service"}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 200:
+            return print_test("POST /api/chat - Basic message", False, f"Expected 200, got {resp.status_code}")
+        
+        data = resp.json()
+        
+        # Check required fields
+        has_session_id = "sessionId" in data and isinstance(data["sessionId"], str) and len(data["sessionId"]) > 0
+        has_answer = "answer" in data and isinstance(data["answer"], str) and len(data["answer"]) > 0
+        has_providers = "providers" in data and isinstance(data["providers"], list)
+        
+        # Check sessionId is UUID format (36 chars with dashes)
+        session_id = data.get("sessionId", "")
+        is_uuid = len(session_id) == 36 and session_id.count("-") == 4
+        
+        if not is_uuid:
+            return print_test("POST /api/chat - Basic message", False, f"sessionId is not a valid UUID: {session_id}")
+        
+        if not (has_session_id and has_answer and has_providers):
+            return print_test("POST /api/chat - Basic message", False, "Missing required fields in response")
+        
+        return print_test("POST /api/chat - Basic message", True, f"Got sessionId, answer ({len(data['answer'])} chars), providers ({len(data['providers'])} items)")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - Basic message", False, f"Exception: {str(e)}")
+
+def test_chat_missing_message():
+    """Test POST /api/chat with missing message - expect 400"""
+    print("\n=== Testing POST /api/chat - Missing message ===")
+    
+    try:
+        payload = {}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 400:
+            return print_test("POST /api/chat - Missing message", False, f"Expected 400, got {resp.status_code}")
+        
+        data = resp.json()
+        has_error = "error" in data and "message is required" in data["error"].lower()
+        
+        if not has_error:
+            return print_test("POST /api/chat - Missing message", False, f"Expected 'message is required' error, got: {data}")
+        
+        return print_test("POST /api/chat - Missing message", True, "Correctly returned 400 with 'message is required'")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - Missing message", False, f"Exception: {str(e)}")
+
+def test_chat_empty_message():
+    """Test POST /api/chat with empty message - expect 400"""
+    print("\n=== Testing POST /api/chat - Empty message ===")
+    
+    try:
+        payload = {"message": "   "}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 400:
+            return print_test("POST /api/chat - Empty message", False, f"Expected 400, got {resp.status_code}")
+        
+        data = resp.json()
+        has_error = "error" in data
+        
+        if not has_error:
+            return print_test("POST /api/chat - Empty message", False, f"Expected error response, got: {data}")
+        
+        return print_test("POST /api/chat - Empty message", True, "Correctly returned 400 for empty message")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - Empty message", False, f"Exception: {str(e)}")
+
+def test_chat_grounding_electrician():
+    """Test GROUNDING - electrician query should return providers"""
+    print("\n=== Testing POST /api/chat - GROUNDING (Electrician) ===")
+    
+    try:
+        payload = {"message": "Suggest an electrician anywhere in India"}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 200:
+            return print_test("POST /api/chat - Grounding (electrician)", False, f"Expected 200, got {resp.status_code}")
+        
+        data = resp.json()
+        providers = data.get("providers", [])
+        answer = data.get("answer", "")
+        
+        if len(providers) == 0:
+            return print_test("POST /api/chat - Grounding (electrician)", False, "Expected providers.length > 0, got 0")
+        
+        # Check provider structure
+        if len(providers) > 0:
+            first_provider = providers[0]
+            required_fields = ["id", "name", "category", "city", "area", "rating", "url"]
+            missing_fields = [f for f in required_fields if f not in first_provider]
+            
+            if missing_fields:
+                return print_test("POST /api/chat - Grounding (electrician)", False, f"Provider missing fields: {missing_fields}")
+            
+            # Check URL format
+            if not first_provider["url"].startswith("/providers/"):
+                return print_test("POST /api/chat - Grounding (electrician)", False, f"Provider URL should start with /providers/, got: {first_provider['url']}")
+        
+        # Check if AI answer references at least one provider name (grounding verification)
+        provider_names = [p.get("name", "") for p in providers]
+        answer_lower = answer.lower()
+        referenced_providers = [name for name in provider_names if name.lower() in answer_lower]
+        
+        if len(referenced_providers) == 0:
+            return print_test("POST /api/chat - Grounding (electrician)", False, "AI answer does not reference any provider names from the grounded data")
+        
+        return print_test("POST /api/chat - Grounding (electrician)", True, f"Got {len(providers)} providers, AI referenced {len(referenced_providers)} provider(s) in answer")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - Grounding (electrician)", False, f"Exception: {str(e)}")
+
+def test_chat_no_match_grounding():
+    """Test NO-MATCH grounding - weather query should return empty providers"""
+    print("\n=== Testing POST /api/chat - NO-MATCH GROUNDING (Weather) ===")
+    
+    try:
+        payload = {"message": "How is the weather today?"}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 200:
+            return print_test("POST /api/chat - No-match grounding", False, f"Expected 200, got {resp.status_code}")
+        
+        data = resp.json()
+        providers = data.get("providers", [])
+        answer = data.get("answer", "")
+        
+        if len(providers) != 0:
+            return print_test("POST /api/chat - No-match grounding", False, f"Expected empty providers array, got {len(providers)} providers")
+        
+        # AI should ask clarifying question or explain it's for local services
+        answer_lower = answer.lower()
+        has_clarifying_response = any(keyword in answer_lower for keyword in [
+            "service", "help", "looking for", "need", "city", "area", "what", "which", "clarif"
+        ])
+        
+        if not has_clarifying_response:
+            return print_test("POST /api/chat - No-match grounding", False, "AI should ask clarifying question or mention services when no match found")
+        
+        return print_test("POST /api/chat - No-match grounding", True, "Correctly returned empty providers and appropriate response")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - No-match grounding", False, f"Exception: {str(e)}")
+
+def test_chat_multi_turn():
+    """Test MULTI-TURN - plumber query followed by follow-up question"""
+    print("\n=== Testing POST /api/chat - MULTI-TURN (Plumber + Follow-up) ===")
+    
+    try:
+        import time
+        
+        # Turn 1: Initial plumber query
+        print("   Turn 1: Initial plumber query")
+        payload1 = {"message": "Suggest a plumber, top options across India"}
+        resp1 = requests.post(f"{BASE_URL}/chat", json=payload1, timeout=30)
+        
+        if resp1.status_code != 200:
+            return print_test("POST /api/chat - Multi-turn", False, f"Turn 1 failed with status {resp1.status_code}")
+        
+        data1 = resp1.json()
+        session_id = data1.get("sessionId")
+        providers1 = data1.get("providers", [])
+        answer1 = data1.get("answer", "")
+        
+        if not session_id or len(providers1) == 0:
+            return print_test("POST /api/chat - Multi-turn", False, "Turn 1 should return sessionId and providers")
+        
+        # Extract 2-3 provider names from Turn 1
+        provider_names = [p.get("name", "") for p in providers1[:3]]
+        print(f"   Provider names from Turn 1: {provider_names}")
+        
+        # Wait a bit to ensure messages are persisted
+        time.sleep(1)
+        
+        # Turn 2: Follow-up question with sessionId
+        print("   Turn 2: Follow-up question with sessionId")
+        payload2 = {"sessionId": session_id, "message": "Which one has the best rating?"}
+        resp2 = requests.post(f"{BASE_URL}/chat", json=payload2, timeout=30)
+        
+        if resp2.status_code != 200:
+            return print_test("POST /api/chat - Multi-turn", False, f"Turn 2 failed with status {resp2.status_code}")
+        
+        data2 = resp2.json()
+        answer2 = data2.get("answer", "")
+        
+        # Verify Turn 2 answer references at least one provider name from Turn 1
+        answer2_lower = answer2.lower()
+        referenced_in_turn2 = [name for name in provider_names if name.lower() in answer2_lower]
+        
+        # Also check if answer mentions "rating" or specific rating values
+        mentions_rating = "rating" in answer2_lower or any(str(i) in answer2 for i in range(1, 6))
+        
+        if len(referenced_in_turn2) == 0 and not mentions_rating:
+            return print_test("POST /api/chat - Multi-turn", False, "Turn 2 should reference provider names or ratings from Turn 1 context")
+        
+        # Store sessionId for next test
+        test_chat_multi_turn.session_id = session_id
+        
+        return print_test("POST /api/chat - Multi-turn", True, f"Multi-turn context working - Turn 2 referenced {len(referenced_in_turn2)} provider(s) from Turn 1")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - Multi-turn", False, f"Exception: {str(e)}")
+
+def test_chat_get_history():
+    """Test GET /api/chat/:sessionId - should return message history"""
+    print("\n=== Testing GET /api/chat/:sessionId - Fetch chat history ===")
+    
+    try:
+        # Get sessionId from previous test
+        session_id = getattr(test_chat_multi_turn, 'session_id', None)
+        
+        if not session_id:
+            return print_test("GET /api/chat/:sessionId", False, "No sessionId available from multi-turn test")
+        
+        resp = requests.get(f"{BASE_URL}/chat/{session_id}", timeout=30)
+        
+        if resp.status_code != 200:
+            return print_test("GET /api/chat/:sessionId", False, f"Expected 200, got {resp.status_code}")
+        
+        data = resp.json()
+        items = data.get("items", [])
+        
+        # Should have 4 messages (2 user + 2 assistant) from multi-turn test
+        if len(items) < 4:
+            return print_test("GET /api/chat/:sessionId", False, f"Expected at least 4 messages, got {len(items)}")
+        
+        # Check for ObjectId leaks
+        for i, msg in enumerate(items[:4]):
+            if "_id" in msg:
+                return print_test("GET /api/chat/:sessionId", False, f"Message {i+1} contains _id field (ObjectId leak)")
+        
+        # Verify alternating user/assistant roles
+        roles = [msg.get("role") for msg in items[:4]]
+        expected_pattern = ["user", "assistant", "user", "assistant"]
+        if roles != expected_pattern:
+            return print_test("GET /api/chat/:sessionId", False, f"Expected role pattern {expected_pattern}, got {roles}")
+        
+        # Check messages are sorted by createdAt ascending
+        timestamps = [msg.get("createdAt") for msg in items]
+        is_sorted = all(timestamps[i] <= timestamps[i+1] for i in range(len(timestamps)-1))
+        
+        if not is_sorted:
+            return print_test("GET /api/chat/:sessionId", False, "Messages should be sorted by createdAt ascending")
+        
+        return print_test("GET /api/chat/:sessionId", True, f"Got {len(items)} messages with correct structure and order")
+        
+    except Exception as e:
+        return print_test("GET /api/chat/:sessionId", False, f"Exception: {str(e)}")
+
+def test_chat_no_objectid_leaks():
+    """Test to ensure no ObjectId leaks in any chat response"""
+    print("\n=== Testing POST /api/chat - No ObjectId leaks ===")
+    
+    try:
+        # Test a simple chat message
+        payload = {"message": "Hello"}
+        resp = requests.post(f"{BASE_URL}/chat", json=payload, timeout=30)
+        
+        if resp.status_code != 200:
+            return print_test("POST /api/chat - No ObjectId leaks", False, f"Chat request failed with status {resp.status_code}")
+        
+        data = resp.json()
+        
+        # Check for _id field in main response
+        if "_id" in data:
+            return print_test("POST /api/chat - No ObjectId leaks", False, "Response contains _id field")
+        
+        # Check providers array
+        providers = data.get("providers", [])
+        for i, provider in enumerate(providers):
+            if "_id" in provider:
+                return print_test("POST /api/chat - No ObjectId leaks", False, f"Provider {i} contains _id field")
+        
+        return print_test("POST /api/chat - No ObjectId leaks", True, "No _id fields found in responses")
+        
+    except Exception as e:
+        return print_test("POST /api/chat - No ObjectId leaks", False, f"Exception: {str(e)}")
+
 def main():
     """Run all tests"""
     print("=" * 80)
@@ -774,6 +1062,16 @@ def main():
     results.append(("Jobs", test_jobs()))
     results.append(("Recent Reviews", test_reviews_recent()))
     results.append(("Post Review", test_post_review()))
+    
+    # Chat API tests
+    results.append(("Chat - Basic message", test_chat_basic_message()))
+    results.append(("Chat - Missing message", test_chat_missing_message()))
+    results.append(("Chat - Empty message", test_chat_empty_message()))
+    results.append(("Chat - Grounding (electrician)", test_chat_grounding_electrician()))
+    results.append(("Chat - No-match grounding", test_chat_no_match_grounding()))
+    results.append(("Chat - Multi-turn", test_chat_multi_turn()))
+    results.append(("Chat - Get history", test_chat_get_history()))
+    results.append(("Chat - No ObjectId leaks", test_chat_no_objectid_leaks()))
     
     # Summary
     print("\n" + "=" * 80)

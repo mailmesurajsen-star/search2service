@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ConciergeChat } from '@/components/concierge-chat';
 import {
   Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
   GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
@@ -446,6 +447,9 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating AI Concierge */}
+      <ConciergeChat />
     </div>
   );
 }

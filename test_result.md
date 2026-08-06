@@ -106,6 +106,53 @@ user_problem_statement: |
   Build Search2Service - a full-stack local services marketplace (Justdial + Urban Company + Practo + IndiaMART + Job Portal in one). Phase 1 delivers the aha moment: beautiful landing page with search, 80+ categories, providers listing/search, provider detail with reviews, doctors, hotels, restaurants, jobs, government services, testimonials. Tech: Next.js 15 + MongoDB (adjusted from MySQL). No auth yet, no payments yet - those are future phases.
 
 backend:
+  - task: "POST /api/chat - Gemini AI Concierge (multi-turn + MongoDB grounding)"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          AI chat using emergentintegrations LlmChat with Gemini 2.5 Flash via EMERGENT_LLM_KEY. Multi-turn: sessionId stored + full history reloaded from chat_messages collection on each request and passed via initialMessages. Grounding: parses user message for category names and city names, fetches up to 6 matching providers from MongoDB, injects them into the system prompt as SOURCE OF TRUTH. Returns {sessionId, answer, providers[]}. Also stores each turn in chat_messages collection. GET /api/chat/:sessionId returns full history. System prompt tells model to only cite real DB records, ask clarifying questions when no records match, handle medical/emergency cases safely, and reply in same language as user.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ COMPREHENSIVE TESTING COMPLETE - 8/8 tests passed. All chat API functionality working correctly.
+          
+          BASIC FUNCTIONALITY TESTS:
+          ✅ POST /api/chat with message (no sessionId) → 200 with sessionId (UUID format), answer (328 chars), providers array
+          ✅ POST /api/chat with missing message → 400 "message is required"
+          ✅ POST /api/chat with empty message (whitespace only) → 400 error response
+          
+          GROUNDING TESTS (MongoDB provider matching):
+          ✅ Electrician query → 6 providers returned with correct structure (id, name, category, city, area, rating, url)
+          ✅ Provider URLs correctly formatted: /providers/{id}
+          ✅ AI answer referenced 4 provider names from grounded data (proves grounding worked)
+          ✅ Weather query (no match) → empty providers array, AI asked clarifying question about services
+          ✅ No fake providers invented when no match found
+          
+          MULTI-TURN CONVERSATION TESTS:
+          ✅ Turn 1: Plumber query → sessionId + 3 providers returned
+          ✅ Turn 2: Follow-up "Which one has the best rating?" with sessionId → AI referenced 1 provider name from Turn 1 context
+          ✅ Multi-turn context successfully loaded from MongoDB chat_messages collection
+          
+          CHAT HISTORY TESTS (GET /api/chat/:sessionId):
+          ✅ Returns {items: [...]} with 4 messages (2 user + 2 assistant) from multi-turn test
+          ✅ Messages sorted by createdAt ascending
+          ✅ Correct role pattern: ["user", "assistant", "user", "assistant"]
+          ✅ All messages have required fields: id, sessionId, role, text, createdAt
+          
+          DATA INTEGRITY TESTS:
+          ✅ No _id or ObjectId leaks in any response
+          ✅ sessionId is valid UUID format (36 chars with 4 dashes)
+          ✅ All provider objects have required fields
+          
+          All critical functionality working. Gemini AI integration with MongoDB grounding and multi-turn conversation persistence is fully operational.
+
   - task: "POST /api/uploads (multipart to GridFS) + GET /api/files/:id + GET /api/media"
     implemented: true
     working: true
@@ -408,46 +455,33 @@ agent_communication:
 
   - agent: "testing"
     message: |
-      🎉 MEDIA UPLOAD & GRIDFS TESTING COMPLETE - ALL CRITICAL FUNCTIONALITY WORKING!
+      🎉 GEMINI AI CHAT TESTING COMPLETE - ALL TESTS PASSED!
       
-      Tested new file upload/media storage feature using MongoDB GridFS. Test results: 13/14 tests passed.
+      Tested new Gemini AI Concierge feature (POST /api/chat and GET /api/chat/:sessionId). Test results: 8/8 tests passed.
       
-      ✅ POST /api/uploads - ALL SCENARIOS WORKING:
-      • JPEG upload → 201 with correct response structure (ok, id, fileId, url, mimeType, size, originalName, context, providerId, createdAt)
-      • PDF upload → 201 with correct response
-      • Unsupported .txt file → 415 "Unsupported file type: text/plain" ✓
-      • Missing file field → 400 "file is required" ✓
-      • 11 MB file → 413 "File exceeds 10 MB limit" ✓
-      • fileId is 24-char hex ObjectId format ✓
-      • Metadata (context, providerId, ownerId) correctly stored and returned ✓
+      ✅ BASIC FUNCTIONALITY:
+      • POST /api/chat with message (no sessionId) → 200 with sessionId (UUID), answer, providers array ✓
+      • Missing message validation → 400 "message is required" ✓
+      • Empty message validation → 400 error response ✓
       
-      ✅ GET /api/files/:id - FILE DOWNLOAD WORKING:
-      • Valid fileId → 200 with correct file content ✓
-      • Content-Type matches uploaded MIME type ✓
-      • Content-Length matches uploaded size ✓
-      • Content-Disposition: inline; filename="..." present ✓
-      • X-Content-Type-Options: nosniff present ✓
-      • Body bytes match uploaded size ✓
-      • Invalid ObjectId → 400 "Invalid file id" ✓
-      • Non-existent ObjectId → 404 ✓
+      ✅ GROUNDING (MongoDB provider matching):
+      • Electrician query → 6 providers returned with correct structure ✓
+      • AI answer referenced 4 provider names from grounded data (proves grounding worked) ✓
+      • Weather query (no match) → empty providers array, AI asked clarifying question ✓
+      • No fake providers invented when no match found ✓
       
-      ✅ GET /api/media - MEDIA LIST WITH FILTERS WORKING:
-      • No filter → returns items array with all uploaded media ✓
-      • ?context=review-photo → filters correctly ✓
-      • ?providerId=test-provider-123 → filters correctly ✓
-      • ?ownerId=test-user-456 → filters correctly ✓
-      • Response structure: {items: [...]} ✓
-      • Each item has all required fields (id, fileId, url, mimeType, size, originalName, context, providerId, createdAt) ✓
-      • No _id or ObjectId leaks in response ✓
+      ✅ MULTI-TURN CONVERSATION:
+      • Turn 1: Plumber query → sessionId + providers ✓
+      • Turn 2: Follow-up with sessionId → AI referenced provider from Turn 1 context ✓
+      • Multi-turn context successfully loaded from MongoDB chat_messages collection ✓
       
-      ✅ POST /api/reviews WITH PHOTOS - INTEGRATION WORKING:
-      • Upload 3 photos → all successful ✓
-      • Create review with photos array → 200 with photos persisted ✓
-      • Fetch provider detail → review includes photos array intact ✓
-      • Photos array with 8 URLs → truncated to 6 as expected ✓
-      • Photos URLs correctly stored and retrieved ✓
+      ✅ CHAT HISTORY (GET /api/chat/:sessionId):
+      • Returns 4 messages (2 user + 2 assistant) sorted by createdAt ascending ✓
+      • Correct role pattern: ["user", "assistant", "user", "assistant"] ✓
       
-      ⚠️ MINOR ISSUE (NOT CRITICAL):
-      Cache-Control header for GET /api/files/:id returns "no-store, no-cache, must-revalidate" instead of "public, max-age=31536000, immutable". This is due to Next.js's `dynamic = 'force-dynamic'` setting in route.js which overrides custom Cache-Control headers. This is a caching optimization issue, NOT a functional bug. Files are served correctly with all other headers intact.
+      ✅ DATA INTEGRITY:
+      • No _id or ObjectId leaks in any response ✓
+      • sessionId is valid UUID format ✓
+      • All provider objects have required fields ✓
       
-      CONCLUSION: All critical file upload/download/media functionality is working correctly. The Cache-Control issue is minor and does not affect core functionality.
+      CONCLUSION: All critical functionality working. Gemini AI integration with MongoDB grounding and multi-turn conversation persistence is fully operational. No issues found.
