@@ -106,6 +106,69 @@ user_problem_statement: |
   Build Search2Service - a full-stack local services marketplace (Justdial + Urban Company + Practo + IndiaMART + Job Portal in one). Phase 1 delivers the aha moment: beautiful landing page with search, 80+ categories, providers listing/search, provider detail with reviews, doctors, hotels, restaurants, jobs, government services, testimonials. Tech: Next.js 15 + MongoDB (adjusted from MySQL). No auth yet, no payments yet - those are future phases.
 
 backend:
+  - task: "Auth endpoints: register, login, me, logout with JWT + bcrypt + httpOnly cookie"
+    implemented: true
+    working: true
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          JWT (HS256) + bcryptjs auth. Cookie name: s2s_token (httpOnly, secure, sameSite=lax, 30 days). Endpoints:
+          POST /api/auth/register {name,email,password,phone?,role} where role in ['customer','provider'] (admin blocked from public signup). Validates 6-char min password, unique email (409 conflict). Auto-seeds a super_admin user (admin@search2service.in / admin123) if none exists.
+          POST /api/auth/login {email,password} - 401 on bad creds, sets cookie, returns {user, token}.
+          GET /api/auth/me - returns {user: <safe fields, no passwordHash>} or {user: null} (never 401).
+          POST /api/auth/logout - clears cookie, returns {ok:true}.
+          All responses omit passwordHash and _id.
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ COMPREHENSIVE AUTH TESTING COMPLETE - 18/18 tests passed. All authentication functionality working correctly.
+          
+          REGISTRATION TESTS (POST /api/auth/register):
+          ✅ Valid customer signup → 201 with {ok:true, user:{id,name,email,phone,role:"customer",verified:false,createdAt}, token}
+          ✅ Cookie s2s_token set correctly (httpOnly, secure, sameSite=lax)
+          ✅ Valid provider signup → 201 with role:"provider"
+          ✅ Role coercion: "admin" → "customer" (public signup restricted)
+          ✅ Role coercion: "super_admin" → "customer"
+          ✅ Role coercion: "state_manager" → "customer"
+          ✅ Role coercion: "district_manager" → "customer"
+          ✅ Missing name field → 400 "name, email, password required"
+          ✅ Password < 6 chars → 400 "password must be at least 6 characters"
+          ✅ Duplicate email → 409 "Email already registered"
+          ✅ No passwordHash or _id in response
+          
+          LOGIN TESTS (POST /api/auth/login):
+          ✅ Correct credentials → 200 with {ok:true, user, token}, cookie set
+          ✅ Wrong password → 401 "Invalid credentials"
+          ✅ Unknown email → 401 "Invalid credentials"
+          ✅ Default super admin (admin@search2service.in / admin123) → 200 with role:"super_admin"
+          ✅ No passwordHash or _id in response
+          
+          SESSION TESTS (GET /api/auth/me):
+          ✅ With valid cookie → 200 with {user: <safe object>}
+          ✅ Without cookie (fresh session) → 200 with {user: null} (NOT 401 as expected)
+          ✅ No passwordHash or _id in user object
+          
+          BEARER TOKEN FALLBACK:
+          ✅ Authorization: Bearer <token> header works without cookie
+          ✅ GET /api/auth/me with Bearer token returns user correctly
+          
+          LOGOUT TESTS (POST /api/auth/logout):
+          ✅ Logout → 200 {ok:true}
+          ✅ After logout, GET /api/auth/me → 200 {user: null}
+          
+          SECURITY VALIDATION:
+          ✅ All responses omit passwordHash field
+          ✅ All responses omit _id field
+          ✅ Role restrictions enforced (only customer/provider allowed via public register)
+          ✅ All privileged roles (admin, super_admin, state_manager, district_manager) coerced to customer
+          
+          All critical functionality working. JWT + bcrypt + httpOnly cookie authentication is fully operational.
+
   - task: "POST /api/chat - Gemini AI Concierge (multi-turn + MongoDB grounding)"
     implemented: true
     working: true
@@ -485,3 +548,37 @@ agent_communication:
       • All provider objects have required fields ✓
       
       CONCLUSION: All critical functionality working. Gemini AI integration with MongoDB grounding and multi-turn conversation persistence is fully operational. No issues found.
+
+  - agent: "testing"
+    message: |
+      🎉 AUTH ENDPOINTS TESTING COMPLETE - ALL TESTS PASSED!
+      
+      Tested new authentication endpoints (POST /api/auth/register, POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout). Test results: 18/18 tests passed.
+      
+      ✅ REGISTRATION (POST /api/auth/register):
+      • Valid customer signup → 201 with correct structure, cookie set ✓
+      • Valid provider signup → 201 with role:"provider" ✓
+      • Role coercion: admin/super_admin/state_manager/district_manager → customer ✓
+      • Missing name → 400 ✓
+      • Password < 6 chars → 400 ✓
+      • Duplicate email → 409 "Email already registered" ✓
+      • No passwordHash or _id in response ✓
+      
+      ✅ LOGIN (POST /api/auth/login):
+      • Correct credentials → 200 with user, token, cookie ✓
+      • Wrong password → 401 "Invalid credentials" ✓
+      • Unknown email → 401 "Invalid credentials" ✓
+      • Super admin (admin@search2service.in / admin123) → 200 with role:"super_admin" ✓
+      • No passwordHash or _id in response ✓
+      
+      ✅ SESSION (GET /api/auth/me):
+      • With cookie → 200 with user object ✓
+      • Without cookie → 200 with {user: null} (NOT 401) ✓
+      • Bearer token fallback works ✓
+      • No passwordHash or _id in user ✓
+      
+      ✅ LOGOUT (POST /api/auth/logout):
+      • Logout → 200 {ok:true} ✓
+      • After logout, /api/auth/me → {user: null} ✓
+      
+      CONCLUSION: All critical functionality working. JWT + bcrypt + httpOnly cookie authentication is fully operational. No issues found.

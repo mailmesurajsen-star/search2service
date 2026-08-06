@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ConciergeChat } from '@/components/concierge-chat';
+import { useAuth } from '@/lib/use-auth';
 import {
   Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
   GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
@@ -38,6 +39,7 @@ function Icon({ name, className }) {
 
 export default function App() {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [q, setQ] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
@@ -111,8 +113,26 @@ export default function App() {
             <Link href="/upload" className="hover:text-blue-600">Upload</Link>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="hidden sm:inline-flex">Login</Button>
-            <Button size="sm" className="bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white">List Business</Button>
+            {user ? (
+              <>
+                <Link href={
+                  user.role === 'provider' ? '/provider/dashboard' :
+                  (user.role === 'admin' || user.role === 'super_admin') ? '/admin/dashboard' :
+                  '/customer/dashboard'
+                }>
+                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 grid place-items-center text-white text-xs font-bold mr-1.5">{user.name[0]}</div>
+                    {user.name.split(' ')[0]}
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push('/'); }}>Sign out</Button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth?mode=login"><Button variant="ghost" size="sm" className="hidden sm:inline-flex">Login</Button></Link>
+                <Link href="/auth?mode=register&role=provider"><Button size="sm" className="bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white">List Business</Button></Link>
+              </>
+            )}
           </div>
         </div>
       </header>

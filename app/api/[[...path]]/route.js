@@ -4,6 +4,7 @@ import { buildCategories, buildProviders, buildReviews, buildJobs, CATEGORY_ICON
 import { v4 as uuid } from 'uuid';
 import { ObjectId } from 'mongodb';
 import { LlmChat, UserMessage } from 'emergentintegrations';
+import { hashPassword, verifyPassword, signToken, setAuthCookie, clearAuthCookie, getCurrentUser, ROLES } from '@/lib/auth';
 
 const SYSTEM_PROMPT = `You are Search2Service Assistant, a friendly AI concierge for India's complete local-services marketplace (like Justdial + Urban Company + Practo + IndiaMART).
 
@@ -43,6 +44,21 @@ async function ensureSeed() {
     const jobs = buildJobs();
     await db.collection('jobs').insertMany(jobs);
   }
+  // Ensure default super admin exists
+  const adminExists = await db.collection('users').findOne({ role: 'super_admin' });
+  if (!adminExists) {
+    const passwordHash = await hashPassword('admin123');
+    await db.collection('users').insertOne({
+      id: uuid(),
+      name: 'Super Admin',
+      email: 'admin@search2service.in',
+      phone: '',
+      role: 'super_admin',
+      passwordHash,
+      verified: true,
+      createdAt: new Date().toISOString(),
+    });
+  }
   // Idempotent migration: assign per-category icons (v2) to existing categories
   const sample = await db.collection('categories').findOne({});
   if (sample && sample.iconVersion !== 2) {
@@ -74,6 +90,58 @@ async function handle(request, ctx) {
   try {
     await ensureSeed();
     const db = await getDb();
+
+    // ============ AUTH ============
+    // POST /api/auth/register
+    if (path === 'auth/register' && method === 'POST') {
+      const body = await request.json();
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '');
+      const name = String(body.name || '').trim();
+      const phone = String(body.phone || '').trim();
+      let role = String(body.role || 'customer').toLowerCase();
+      if (!['customer', 'provider'].includes(role)) role = 'customer'; // public signup limited
+      if (!email || !password || !name) return NextResponse.json({ error: 'name, email, password required' }, { status: 400 });
+      if (password.length < 6) return NextResponse.json({ error: 'password must be at least 6 characters' }, { status: 400 });
+      const exists = await db.collection('users').findOne({ email });
+      if (exists) return NextResponse.json({ error: 'Email already registered' }, { status: 409 });
+      const passwordHash = await hashPassword(password);
+      const user = { id: uuid(), name, email, phone, role, passwordHash, verified: false, createdAt: new Date().toISOString() };
+      await db.collection('users').insertOne({ ...user });
+      const token = signToken({ uid: user.id, role: user.role, email: user.email });
+      await setAuthCookie(token);
+      const { passwordHash: _, ...safe } = user;
+      return NextResponse.json({ ok: true, user: safe, token }, { status: 201 });
+    }
+
+    // POST /api/auth/login
+    if (path === 'auth/login' && method === 'POST') {
+      const body = await request.json();
+      const email = String(body.email || '').trim().toLowerCase();
+      const password = String(body.password || '');
+      if (!email || !password) return NextResponse.json({ error: 'email and password required' }, { status: 400 });
+      const user = await db.collection('users').findOne({ email });
+      if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      const ok = await verifyPassword(password, user.passwordHash);
+      if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+      const token = signToken({ uid: user.id, role: user.role, email: user.email });
+      await setAuthCookie(token);
+      const { passwordHash: _, _id, ...safe } = user;
+      return NextResponse.json({ ok: true, user: safe, token });
+    }
+
+    // GET /api/auth/me
+    if (path === 'auth/me' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ user: null }, { status: 200 });
+      return NextResponse.json({ user });
+    }
+
+    // POST /api/auth/logout
+    if (path === 'auth/logout' && method === 'POST') {
+      await clearAuthCookie();
+      return NextResponse.json({ ok: true });
+    }
 
     // POST /api/chat - AI concierge (Gemini via Emergent Universal Key)
     if (path === 'chat' && method === 'POST') {
