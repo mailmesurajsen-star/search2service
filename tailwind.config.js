@@ -7,6 +7,24 @@ module.exports = {
       './app/**/*.{js,jsx}',
       './src/**/*.{js,jsx}',
     ],
+    safelist: [
+      // Dynamic gradient classes from category data in MongoDB
+      'from-rose-500','to-pink-600',
+      'from-fuchsia-500','to-purple-600',
+      'from-amber-500','to-orange-600',
+      'from-slate-600','to-slate-800',
+      'from-indigo-500','to-blue-700',
+      'from-red-500','to-orange-600',
+      'from-emerald-500','to-teal-600',
+      'from-cyan-500','to-blue-600',
+      'from-blue-600','to-indigo-700',
+      'from-green-600','to-emerald-700',
+      'from-sky-500','to-blue-600',
+      'from-yellow-500','to-amber-600',
+      'from-orange-500','to-red-600',
+      'from-stone-600','to-neutral-800',
+      'from-blue-500','to-blue-700',
+    ],
     prefix: "",
     theme: {
       container: {

@@ -12,10 +12,24 @@ import { ConciergeChat } from '@/components/concierge-chat';
 import {
   Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
   GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
-  Verified, TrendingUp, Clock, HeartHandshake, Award, Users, Building2, IndianRupee
+  Verified, TrendingUp, Clock, HeartHandshake, Award, Users, Building2, IndianRupee,
+  Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
+  Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
+  Monitor, Laptop, Cctv, Video, PartyPopper, Building, BedDouble, UtensilsCrossed, Coffee, Croissant, CakeSlice,
+  School, BookOpen, PenLine, Library, BookMarked, Pen, Shirt, Ruler, IdCard, PrinterCheck, Car, Bus, Package, Truck, Cat,
+  FileText, CreditCard, Fingerprint, Receipt, FileBadge, Shield, FileHeart, Heart, CarFront, Vote,
+  Calculator, Gavel, Percent, FileSpreadsheet,
 } from 'lucide-react';
 
-const ICONS = { Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale };
+const ICONS = {
+  Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale,
+  Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
+  Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
+  Monitor, Laptop, Cctv, Video, PartyPopper, Building, BedDouble, UtensilsCrossed, Coffee, Croissant, CakeSlice,
+  School, BookOpen, PenLine, Library, BookMarked, Pen, Shirt, Ruler, IdCard, PrinterCheck, Car, Bus, Package, Truck, Cat,
+  FileText, CreditCard, Fingerprint, Receipt, FileBadge, Shield, FileHeart, Heart, CarFront, Vote,
+  Calculator, Gavel, Percent, FileSpreadsheet, Building2,
+};
 
 function Icon({ name, className }) {
   const C = ICONS[name] || Sparkles;
@@ -193,7 +207,7 @@ export default function App() {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${items[0]?.color || 'from-blue-500 to-blue-700'} grid place-items-center text-white`}>
-                      <Icon name={items[0]?.icon} className="w-5 h-5" />
+                      <Icon name={items[0]?.groupIcon || items[0]?.icon} className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-lg">{group}</h3>
                   </div>

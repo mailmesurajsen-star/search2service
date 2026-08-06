@@ -3,9 +3,25 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ChevronLeft, Search, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale } from 'lucide-react';
+import {
+  ChevronLeft, Search, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale,
+  Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
+  Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
+  Monitor, Laptop, Cctv, Video, PartyPopper, Building, BedDouble, UtensilsCrossed, Coffee, Croissant, CakeSlice,
+  School, BookOpen, PenLine, Library, BookMarked, Pen, Shirt, Ruler, IdCard, PrinterCheck, Car, Bus, Package, Truck, Cat,
+  FileText, CreditCard, Fingerprint, Receipt, FileBadge, Shield, FileHeart, Heart, CarFront, Vote,
+  Calculator, Gavel, Percent, FileSpreadsheet, Building2,
+} from 'lucide-react';
 
-const ICONS = { Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale };
+const ICONS = {
+  Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils, GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale,
+  Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
+  Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
+  Monitor, Laptop, Cctv, Video, PartyPopper, Building, BedDouble, UtensilsCrossed, Coffee, Croissant, CakeSlice,
+  School, BookOpen, PenLine, Library, BookMarked, Pen, Shirt, Ruler, IdCard, PrinterCheck, Car, Bus, Package, Truck, Cat,
+  FileText, CreditCard, Fingerprint, Receipt, FileBadge, Shield, FileHeart, Heart, CarFront, Vote,
+  Calculator, Gavel, Percent, FileSpreadsheet, Building2,
+};
 function Icon({ name, className }) { const C = ICONS[name] || Sparkles; return <C className={className} />; }
 
 export default function CategoriesPage() {
@@ -42,7 +58,7 @@ export default function CategoriesPage() {
               <div key={group}>
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${items[0]?.color} grid place-items-center text-white`}>
-                    <Icon name={items[0]?.icon} className="w-5 h-5" />
+                    <Icon name={items[0]?.groupIcon || items[0]?.icon} className="w-5 h-5" />
                   </div>
                   <h2 className="text-xl font-bold">{group}</h2>
                   <span className="text-sm text-slate-500">({filtered.length})</span>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, getFilesBucket } from '@/lib/mongodb';
-import { buildCategories, buildProviders, buildReviews, buildJobs } from '@/lib/seed-data';
+import { buildCategories, buildProviders, buildReviews, buildJobs, CATEGORY_ICONS, CATEGORY_GROUPS } from '@/lib/seed-data';
 import { v4 as uuid } from 'uuid';
 import { ObjectId } from 'mongodb';
 import { LlmChat, UserMessage } from 'emergentintegrations';
@@ -42,6 +42,19 @@ async function ensureSeed() {
     if (revs.length) await db.collection('reviews').insertMany(revs);
     const jobs = buildJobs();
     await db.collection('jobs').insertMany(jobs);
+  }
+  // Idempotent migration: assign per-category icons (v2) to existing categories
+  const sample = await db.collection('categories').findOne({});
+  if (sample && sample.iconVersion !== 2) {
+    const ops = [];
+    for (const [name, icon] of Object.entries(CATEGORY_ICONS)) {
+      ops.push({ updateMany: { filter: { name }, update: { $set: { icon, iconVersion: 2 } } } });
+    }
+    // Also store group's own icon in groupIcon field
+    for (const g of CATEGORY_GROUPS) {
+      ops.push({ updateMany: { filter: { group: g.group }, update: { $set: { groupIcon: g.icon } } } });
+    }
+    if (ops.length) await db.collection('categories').bulkWrite(ops, { ordered: false });
   }
 }
 
