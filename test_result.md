@@ -106,6 +106,72 @@ user_problem_statement: |
   Build Search2Service - a full-stack local services marketplace (Justdial + Urban Company + Practo + IndiaMART + Job Portal in one). Phase 1 delivers the aha moment: beautiful landing page with search, 80+ categories, providers listing/search, provider detail with reviews, doctors, hotels, restaurants, jobs, government services, testimonials. Tech: Next.js 15 + MongoDB (adjusted from MySQL). No auth yet, no payments yet - those are future phases.
 
 backend:
+  - task: "Provider Portal APIs: business CRUD, media, bookings, analytics, POST /api/bookings"
+    implemented: true
+    working: false
+    file: "/app/app/api/[[...path]]/route.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          New endpoints (all require provider auth via cookie/bearer except /api/bookings which allows guests):
+          GET /api/provider/business - returns the provider owned by current user (ownerId match) or {business: null}.
+          PUT /api/provider/business - upsert business owned by current user. Requires provider/admin role (403 otherwise). Auto-derives categoryId/name/group from categorySlug. Sanitizes services/offers arrays. Auto-generates location.embedUrl (Google Maps) from address. Preserves rating/reviewCount/verified/premium/featured across updates.
+          GET /api/provider/media - lists media by ownerId or providerId (of the user's business).
+          DELETE /api/provider/media/:id - deletes media (checks ownership) and removes underlying GridFS file.
+          GET /api/provider/bookings - lists bookings for user's provider with counts by status (pending/confirmed/completed/cancelled/total).
+          PATCH /api/provider/bookings/:id - update booking status (pending|confirmed|completed|cancelled) with validation.
+          GET /api/provider/analytics - returns {views, leads, bookings, revenue, reviews, rating, series[7]} with 7-day pseudo-random views/leads series.
+          POST /api/bookings - PUBLIC endpoint; customer creates booking with {providerId, customerName, customerPhone, service, date, slot, note}. status defaults to 'pending'. If auth cookie present, links customerId to logged-in user.
+          Also fixed /api/locations to filter out empty state/district/city/area strings so shadcn Select doesn't crash.
+      - working: false
+        agent: "testing"
+        comment: |
+          ❌ COMPREHENSIVE TESTING COMPLETE - 15/17 tests passed, 2 CRITICAL BUGS FOUND
+          
+          PASSED TESTS (15):
+          ✅ TEST 1: GET /api/provider/business (before saving) → 200 with {business: null}
+          ✅ TEST 2: GET /api/provider/business (WITHOUT cookie) → 401 "unauthorized"
+          ✅ TEST 3: PUT /api/provider/business with full body → 200 with correct business object, all validations passed (UUID, ownerId match, categoryName/group auto-derived, embedUrl generated, services/paymentMethods preserved, no _id/passwordHash)
+          ✅ TEST 4: GET /api/provider/business (after save) → returns the same business
+          ✅ TEST 6: PUT /api/provider/business WITHOUT cookie → 401
+          ✅ TEST 7: PUT /api/provider/business as CUSTOMER role → 403 "provider role required"
+          ✅ TEST 8: POST /api/bookings → 201 with booking object (status: pending, correct structure)
+          ✅ TEST 9: POST /api/bookings WITHOUT providerId → 400 "providerId required"
+          ✅ TEST 10: GET /api/provider/bookings → returns {items, stats} with correct counts
+          ✅ TEST 13: GET /api/provider/analytics → returns {views, leads, bookings, revenue, reviews, rating, series[7]} with correct structure
+          ✅ TEST 14: GET /api/provider/media + POST /api/uploads → media upload and listing works
+          ✅ TEST 15: DELETE /api/provider/media/:id → 200, file removed from GridFS (404 on GET /api/files/:id)
+          ✅ TEST 16: DELETE /api/provider/media/:id with fake mediaId → 404
+          ✅ TEST 17: GET /api/locations → no empty strings in states/districts/cities/areas arrays
+          
+          CRITICAL BUG #1 - PATCH METHOD NOT EXPORTED (line 627-632):
+          ❌ TEST 11: PATCH /api/provider/bookings/:id with status:"confirmed" → 405 Method Not Allowed
+          ❌ TEST 12: PATCH /api/provider/bookings/:id with invalid status → 405 Method Not Allowed
+          ROOT CAUSE: route.js exports GET, POST, PUT, DELETE, HEAD but NOT PATCH. The PATCH handler is implemented (line 284-294) but not exported.
+          FIX REQUIRED: Add `export const PATCH = handle;` at line 632 in /app/app/api/[[...path]]/route.js
+          
+          CRITICAL BUG #2 - PUT /api/provider/business DOES NOT PRESERVE EXISTING FIELDS ON PARTIAL UPDATE (line 156-220):
+          ❌ TEST 5: PUT /api/provider/business with subset {name, description} → services and phone fields WIPED OUT (became [] and "")
+          ROOT CAUSE: Lines 174-190 use fallback logic like `b.phone || user.phone || ''` and `Array.isArray(b.services) ? b.services : []` which do NOT fall back to existing values when fields are omitted in the request body.
+          AFFECTED FIELDS: phone (line 179), state (174), district (175), city (176), area (177), address (178), website (182), services (183), upi (188), razorpayKeyId (189), and others.
+          FIX REQUIRED: Change fallback logic to preserve existing values. Examples:
+            - Line 179: `phone: b.phone || existing?.phone || user.phone || '',`
+            - Line 183: `services: Array.isArray(b.services) ? b.services.slice(0, 20).filter(Boolean) : (existing?.services || []),`
+            - Similar fixes needed for state, district, city, area, address, website, upi, razorpayKeyId, whatsapp, offers, priceFrom, priceTo, fees, paymentMethods
+          
+          SECURITY & DATA INTEGRITY:
+          ✅ No _id or ObjectId leaks in any response
+          ✅ No passwordHash leaks
+          ✅ Cookie-based authentication working correctly
+          ✅ Role-based access control working (403 for customer trying to PUT business)
+          ✅ Authorization checks working (401 without cookie)
+          
+          All other endpoints working correctly. The two bugs above are blocking full Provider Portal functionality.
+
   - task: "Auth endpoints: register, login, me, logout with JWT + bcrypt + httpOnly cookie"
     implemented: true
     working: true
@@ -582,3 +648,47 @@ agent_communication:
       • After logout, /api/auth/me → {user: null} ✓
       
       CONCLUSION: All critical functionality working. JWT + bcrypt + httpOnly cookie authentication is fully operational. No issues found.
+
+  - agent: "testing"
+    message: |
+      ❌ PROVIDER PORTAL API TESTING COMPLETE - 2 CRITICAL BUGS FOUND
+      
+      Tested all NEW Provider Portal backend APIs with cookie-based authentication. Results: 15/17 tests passed, 2 CRITICAL BUGS blocking full functionality.
+      
+      ✅ WORKING ENDPOINTS (15 tests passed):
+      • GET /api/provider/business (before/after save, with/without auth) ✓
+      • PUT /api/provider/business (full body create, auth checks, role checks) ✓
+      • POST /api/bookings (create booking, validation) ✓
+      • GET /api/provider/bookings (list with stats) ✓
+      • GET /api/provider/analytics (7-day series, correct structure) ✓
+      • GET /api/provider/media + POST /api/uploads (upload and list) ✓
+      • DELETE /api/provider/media/:id (delete with GridFS cleanup) ✓
+      • GET /api/locations (no empty strings) ✓
+      
+      🔴 CRITICAL BUG #1 - PATCH METHOD NOT EXPORTED:
+      TESTS AFFECTED: TEST 11 & 12 (PATCH /api/provider/bookings/:id)
+      SYMPTOM: 405 Method Not Allowed when trying to update booking status
+      ROOT CAUSE: /app/app/api/[[...path]]/route.js exports GET, POST, PUT, DELETE, HEAD but NOT PATCH (line 627-632). The PATCH handler is implemented (line 284-294) but not accessible.
+      FIX: Add `export const PATCH = handle;` after line 631
+      IMPACT: Providers CANNOT update booking status (pending → confirmed → completed)
+      
+      🔴 CRITICAL BUG #2 - PUT /api/provider/business WIPES OUT EXISTING FIELDS ON PARTIAL UPDATE:
+      TEST AFFECTED: TEST 5 (partial update with {name, description})
+      SYMPTOM: When updating only name and description, services array becomes [], phone becomes ""
+      ROOT CAUSE: Lines 174-190 use fallback logic that does NOT preserve existing values when fields are omitted. Examples:
+        - Line 179: `phone: b.phone || user.phone || ''` (missing existing?.phone)
+        - Line 183: `services: Array.isArray(b.services) ? b.services : []` (missing existing?.services fallback)
+      AFFECTED FIELDS: phone, state, district, city, area, address, website, services, upi, razorpayKeyId, whatsapp, offers, priceFrom, priceTo, fees, paymentMethods
+      FIX: Change fallback logic to include existing values. Examples:
+        - Line 179: `phone: b.phone || existing?.phone || user.phone || '',`
+        - Line 183: `services: Array.isArray(b.services) ? b.services.slice(0, 20).filter(Boolean) : (existing?.services || []),`
+      IMPACT: Providers CANNOT partially update their business profile without losing data
+      
+      ✅ SECURITY & DATA INTEGRITY:
+      • No _id or ObjectId leaks ✓
+      • No passwordHash leaks ✓
+      • Cookie-based auth working ✓
+      • Role-based access control working (403 for customer) ✓
+      • Authorization checks working (401 without cookie) ✓
+      
+      RECOMMENDATION: Fix both bugs before production. Bug #2 is data loss risk. Bug #1 blocks core booking workflow.

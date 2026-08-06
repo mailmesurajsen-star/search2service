@@ -22,7 +22,6 @@ export default function ProviderPage() {
   const [loading, setLoading] = useState(true);
   const [reviewForm, setReviewForm] = useState({ userName: '', rating: 5, comment: '', photos: [] });
   const [submitting, setSubmitting] = useState(false);
-
   useEffect(() => {
     fetch(`/api/providers/${id}`).then(r => r.json()).then(d => { setData(d); setLoading(false); });
   }, [id]);
@@ -196,21 +195,7 @@ export default function ProviderPage() {
               <TabsContent value="book" className="mt-4">
                 <Card><CardContent className="p-6">
                   <h3 className="font-bold text-lg mb-4">Book Appointment</h3>
-                  <div className="grid gap-3">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div><div className="font-semibold">Consultation Fee</div><div className="text-xs text-slate-500">Per visit</div></div>
-                      <div className="font-bold text-lg flex items-center"><IndianRupee className="w-4 h-4" />{p.fees}</div>
-                    </div>
-                    <Input placeholder="Patient name" />
-                    <Input placeholder="Phone number" />
-                    <Input type="date" />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline">Morning Slot</Button>
-                      <Button variant="outline">Evening Slot</Button>
-                    </div>
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => toast.success('Appointment request sent! Provider will confirm via WhatsApp/SMS.')}><Calendar className="w-4 h-4 mr-2" />Confirm Appointment</Button>
-                    <div className="text-xs text-center text-slate-500">Full payment & video consultation coming in Phase 10</div>
-                  </div>
+                  <BookingForm providerId={id} defaultFee={p.fees} isDoctor={true} />
                 </CardContent></Card>
               </TabsContent>
             )}
@@ -260,6 +245,40 @@ export default function ProviderPage() {
           )}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function BookingForm({ providerId, defaultFee, isDoctor }) {
+  const [form, setForm] = useState({ customerName: '', customerPhone: '', service: '', date: '', slot: 'morning', note: '' });
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!form.customerName || !form.customerPhone || !form.date) { toast.error('Name, phone, and date are required'); return; }
+    setBusy(true);
+    const r = await fetch('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ providerId, ...form }) });
+    const d = await r.json();
+    setBusy(false);
+    if (r.ok) { toast.success('Booking request sent! Provider will confirm via phone/WhatsApp.'); setForm({ customerName: '', customerPhone: '', service: '', date: '', slot: 'morning', note: '' }); }
+    else toast.error(d.error || 'Failed');
+  };
+  return (
+    <div className="grid gap-3">
+      {isDoctor && defaultFee > 0 && (
+        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+          <div><div className="font-semibold">Consultation Fee</div><div className="text-xs text-slate-500">Per visit</div></div>
+          <div className="font-bold text-lg flex items-center"><IndianRupee className="w-4 h-4" />{defaultFee}</div>
+        </div>
+      )}
+      <Input placeholder="Your name" value={form.customerName} onChange={e => setForm({ ...form, customerName: e.target.value })} />
+      <Input placeholder="Phone number" value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} />
+      <Input placeholder="Service needed (optional)" value={form.service} onChange={e => setForm({ ...form, service: e.target.value })} />
+      <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant={form.slot === 'morning' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'morning' })}>Morning Slot</Button>
+        <Button variant={form.slot === 'evening' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'evening' })}>Evening Slot</Button>
+      </div>
+      <Textarea placeholder="Note (optional)" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} />
+      <Button disabled={busy} onClick={submit} className="bg-blue-600 hover:bg-blue-700 text-white"><Calendar className="w-4 h-4 mr-2" />{busy ? 'Sending...' : 'Confirm Booking'}</Button>
     </div>
   );
 }

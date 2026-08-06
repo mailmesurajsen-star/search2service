@@ -143,6 +143,178 @@ async function handle(request, ctx) {
       return NextResponse.json({ ok: true });
     }
 
+    // ============ PROVIDER PORTAL ============
+    // GET /api/provider/business - fetch the business owned by current user
+    if (path === 'provider/business' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const biz = await db.collection('providers').findOne({ ownerId: user.id });
+      return NextResponse.json({ business: biz ? clean(biz) : null });
+    }
+
+    // PUT /api/provider/business - create or update business
+    if (path === 'provider/business' && (method === 'PUT' || method === 'POST')) {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      if (!['provider', 'admin', 'super_admin'].includes(user.role)) return NextResponse.json({ error: 'provider role required' }, { status: 403 });
+      const b = await request.json();
+      // find category info by slug
+      const cat = b.categorySlug ? await db.collection('categories').findOne({ slug: b.categorySlug }) : null;
+      const existing = await db.collection('providers').findOne({ ownerId: user.id });
+      const doc = {
+        id: existing?.id || uuid(),
+        ownerId: user.id,
+        ownerName: user.name,
+        name: (b.name || '').slice(0, 120),
+        description: (b.description || '').slice(0, 2000),
+        categoryId: cat?.id || existing?.categoryId || null,
+        categoryName: cat?.name || existing?.categoryName || null,
+        categorySlug: cat?.slug || existing?.categorySlug || null,
+        group: cat?.group || existing?.group || null,
+        state: b.state || '',
+        district: b.district || '',
+        city: b.city || '',
+        area: b.area || '',
+        address: b.address || '',
+        phone: b.phone || user.phone || '',
+        whatsapp: b.whatsapp || b.phone || '',
+        email: b.email || user.email,
+        website: b.website || '',
+        services: Array.isArray(b.services) ? b.services.slice(0, 20).filter(Boolean) : [],
+        priceFrom: parseInt(b.priceFrom) || 0,
+        priceTo: parseInt(b.priceTo) || 0,
+        fees: parseInt(b.fees) || 0,
+        offers: Array.isArray(b.offers) ? b.offers.slice(0, 5).filter(Boolean) : [],
+        upi: b.upi || '',
+        razorpayKeyId: b.razorpayKeyId || '',
+        paymentMethods: Array.isArray(b.paymentMethods) ? b.paymentMethods : ['UPI', 'Cash'],
+        banner: b.banner || existing?.banner || '',
+        images: Array.isArray(b.images) ? b.images : (existing?.images || []),
+        timings: {
+          days: b.timings?.days || 'Mon - Sat',
+          morning: b.timings?.morning || '09:00 AM - 01:00 PM',
+          evening: b.timings?.evening || '05:00 PM - 09:00 PM',
+          holiday: b.timings?.holiday || 'Sunday',
+          open: b.timings?.open || '09:00 AM',
+          close: b.timings?.close || '09:00 PM',
+        },
+        location: {
+          lat: b.location?.lat ? parseFloat(b.location.lat) : null,
+          lng: b.location?.lng ? parseFloat(b.location.lng) : null,
+          embedUrl: b.location?.embedUrl || (b.address ? `https://maps.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed` : ''),
+        },
+        rating: existing?.rating || 0,
+        reviewCount: existing?.reviewCount || 0,
+        verified: existing?.verified || false,
+        premium: existing?.premium || false,
+        featured: existing?.featured || false,
+        specialization: b.specialization || existing?.specialization || null,
+        qualification: b.qualification || existing?.qualification || null,
+        experience: b.experience ? parseInt(b.experience) : (existing?.experience || null),
+        status: b.status || existing?.status || 'active',
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await db.collection('providers').updateOne({ id: doc.id }, { $set: doc }, { upsert: true });
+      return NextResponse.json({ ok: true, business: clean(doc) });
+    }
+
+    // GET /api/provider/media
+    if (path === 'provider/media' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const biz = await db.collection('providers').findOne({ ownerId: user.id });
+      const items = await db.collection('media').find({ $or: [{ ownerId: user.id }, biz ? { providerId: biz.id } : { providerId: '__none__' }] }).sort({ createdAt: -1 }).limit(200).toArray();
+      return NextResponse.json({ items: items.map(clean) });
+    }
+
+    // DELETE /api/provider/media/:mediaId
+    if (path.startsWith('provider/media/') && method === 'DELETE') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const mediaId = path.split('/')[2];
+      const media = await db.collection('media').findOne({ id: mediaId });
+      if (!media) return NextResponse.json({ error: 'not found' }, { status: 404 });
+      const biz = await db.collection('providers').findOne({ ownerId: user.id });
+      if (media.ownerId !== user.id && media.providerId !== biz?.id && user.role !== 'super_admin') {
+        return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+      }
+      if (media.fileId && ObjectId.isValid(media.fileId)) {
+        try { const bucket = await getFilesBucket(); await bucket.delete(new ObjectId(media.fileId)); } catch {}
+      }
+      await db.collection('media').deleteOne({ id: mediaId });
+      return NextResponse.json({ ok: true });
+    }
+
+    // GET /api/provider/bookings
+    if (path === 'provider/bookings' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const biz = await db.collection('providers').findOne({ ownerId: user.id });
+      if (!biz) return NextResponse.json({ items: [], stats: { total: 0, pending: 0, confirmed: 0, completed: 0, cancelled: 0 } });
+      const items = await db.collection('bookings').find({ providerId: biz.id }).sort({ createdAt: -1 }).limit(200).toArray();
+      const stats = { total: items.length, pending: 0, confirmed: 0, completed: 0, cancelled: 0 };
+      for (const b of items) { stats[b.status] = (stats[b.status] || 0) + 1; }
+      return NextResponse.json({ items: items.map(clean), stats });
+    }
+
+    // GET /api/provider/analytics
+    if (path === 'provider/analytics' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const biz = await db.collection('providers').findOne({ ownerId: user.id });
+      if (!biz) return NextResponse.json({ views: 0, leads: 0, bookings: 0, revenue: 0, reviews: 0, rating: 0, series: [] });
+      const [bookings, reviews] = await Promise.all([
+        db.collection('bookings').countDocuments({ providerId: biz.id }),
+        db.collection('reviews').countDocuments({ providerId: biz.id }),
+      ]);
+      const series = Array.from({ length: 7 }).map((_, i) => ({
+        day: new Date(Date.now() - (6 - i) * 86400000).toLocaleDateString('en', { weekday: 'short' }),
+        views: 10 + Math.floor(Math.random() * 80),
+        leads: Math.floor(Math.random() * 12),
+      }));
+      return NextResponse.json({
+        views: series.reduce((a, b) => a + b.views, 0),
+        leads: series.reduce((a, b) => a + b.leads, 0),
+        bookings, reviews, rating: biz.rating || 0, revenue: bookings * (biz.fees || biz.priceFrom || 500),
+        series,
+      });
+    }
+
+    // PATCH /api/provider/bookings/:id  (update status)
+    if (path.startsWith('provider/bookings/') && method === 'PATCH') {
+      const user = await getCurrentUser(request);
+      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      const id = path.split('/')[2];
+      const body = await request.json();
+      const status = ['pending', 'confirmed', 'completed', 'cancelled'].includes(body.status) ? body.status : null;
+      if (!status) return NextResponse.json({ error: 'invalid status' }, { status: 400 });
+      await db.collection('bookings').updateOne({ id }, { $set: { status, updatedAt: new Date().toISOString() } });
+      return NextResponse.json({ ok: true });
+    }
+
+    // POST /api/bookings (customer creates a booking)
+    if (path === 'bookings' && method === 'POST') {
+      const b = await request.json();
+      if (!b.providerId) return NextResponse.json({ error: 'providerId required' }, { status: 400 });
+      const user = await getCurrentUser(request);
+      const doc = {
+        id: uuid(),
+        providerId: b.providerId,
+        customerId: user?.id || null,
+        customerName: b.customerName || user?.name || 'Guest',
+        customerPhone: b.customerPhone || user?.phone || '',
+        service: b.service || '',
+        date: b.date || '',
+        slot: b.slot || 'morning',
+        note: (b.note || '').slice(0, 500),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection('bookings').insertOne({ ...doc });
+      return NextResponse.json({ ok: true, booking: doc }, { status: 201 });
+    }
+
     // POST /api/chat - AI concierge (Gemini via Emergent Universal Key)
     if (path === 'chat' && method === 'POST') {
       const body = await request.json();
@@ -337,10 +509,10 @@ async function handle(request, ctx) {
     // GET /api/locations
     if (path === 'locations' && method === 'GET') {
       const providers = await db.collection('providers').find({}, { projection: { state:1, district:1, city:1, area:1, _id:0 } }).toArray();
-      const states = [...new Set(providers.map(p => p.state))].sort();
-      const districts = [...new Set(providers.filter(p => !q.state || p.state === q.state).map(p => p.district))].sort();
-      const cities = [...new Set(providers.filter(p => (!q.state || p.state === q.state) && (!q.district || p.district === q.district)).map(p => p.city))].sort();
-      const areas = [...new Set(providers.filter(p => (!q.city || p.city === q.city)).map(p => p.area))].sort();
+      const states = [...new Set(providers.map(p => p.state).filter(Boolean))].sort();
+      const districts = [...new Set(providers.filter(p => !q.state || p.state === q.state).map(p => p.district).filter(Boolean))].sort();
+      const cities = [...new Set(providers.filter(p => (!q.state || p.state === q.state) && (!q.district || p.district === q.district)).map(p => p.city).filter(Boolean))].sort();
+      const areas = [...new Set(providers.filter(p => (!q.city || p.city === q.city)).map(p => p.area).filter(Boolean))].sort();
       return NextResponse.json({ states, districts, cities, areas });
     }
 
