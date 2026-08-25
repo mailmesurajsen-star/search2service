@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Filter, SlidersHorizontal, ChevronLeft, IndianRupee } from 'lucide-react';
+import { AdBanner } from '@/components/ad-banner';
 
 function SearchInner() {
   const sp = useSearchParams();
@@ -82,16 +83,29 @@ function SearchInner() {
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">State</label>
-                <Select value={state || 'all'} onValueChange={v => setState(v === 'all' ? '' : v)}>
+                <Select value={state || 'all'} onValueChange={v => {
+                  const nextState = v === 'all' ? '' : v;
+                  setState(nextState);
+                  setCity('');
+                  fetch(`/api/locations${nextState ? `?state=${encodeURIComponent(nextState)}` : ''}`)
+                    .then(r => r.json())
+                    .then(d => setLocations(prev => ({ ...prev, cities: d.cities || [] })));
+                }}>
                   <SelectTrigger><SelectValue placeholder="All States" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">All States</SelectItem>{locations.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">🇮🇳 All States (Pan-India)</SelectItem>
+                    {locations.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 mb-1 block">City</label>
                 <Select value={city || 'all'} onValueChange={v => setCity(v === 'all' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="All Cities" /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">All Cities</SelectItem>{locations.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">All Cities</SelectItem>
+                    {locations.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
@@ -107,10 +121,16 @@ function SearchInner() {
               <Button variant="outline" size="sm" className="w-full" onClick={() => { setQ(''); setState(''); setCity(''); setCategory(''); setGroup(''); setPremium(false); setVerified(false); }}>Clear filters</Button>
             </CardContent>
           </Card>
+
+          {/* SPONSORED SIDEBAR AD */}
+          <AdBanner placement="search_sidebar" />
         </aside>
 
         {/* RESULTS */}
         <div>
+          {/* SPONSORED TOP BANNER */}
+          <AdBanner placement="search_top" className="mb-6" />
+
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">{loading ? 'Searching...' : `${total} results`}</h1>
@@ -149,6 +169,7 @@ function SearchInner() {
                     </div>
                     <CardContent className="p-4">
                       <div className="font-bold group-hover:text-blue-600">{p.name}</div>
+                      {p.doctorName && <div className="text-xs text-slate-600 font-medium">{p.doctorName}</div>}
                       <div className="text-xs text-slate-500 mt-0.5">{p.categoryName} {p.specialization && `• ${p.specialization}`}</div>
                       <div className="flex items-center gap-1 mt-2 text-sm">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />

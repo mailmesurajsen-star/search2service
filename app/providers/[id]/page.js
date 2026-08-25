@@ -71,6 +71,7 @@ export default function ProviderPage() {
                 <Badge variant="outline" className="border-white/50 text-white">{p.categoryName}</Badge>
               </div>
               <h1 className="text-2xl md:text-4xl font-bold">{p.name}</h1>
+              {isDoctor && p.doctorName && <div className="text-lg font-semibold text-white/90 mt-0.5">{p.doctorName}</div>}
               {isDoctor && <div className="text-orange-200 mt-1">{p.specialization} • {p.qualification} • {p.experience}+ years experience</div>}
               <div className="flex items-center gap-3 mt-2 text-sm">
                 <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><b>{p.rating}</b> <span className="text-slate-200">({p.reviewCount} reviews)</span></span>

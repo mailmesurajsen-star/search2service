@@ -14,6 +14,7 @@ export default function ProviderAnalyticsPage() {
   useEffect(() => {
     if (!loading && !user) router.replace('/auth?next=/provider/analytics');
     else if (user && !['provider', 'admin', 'super_admin'].includes(user.role)) router.replace('/');
+    else if (user && user.role === 'provider' && !user.plan) router.replace('/provider/plan');
   }, [user, loading, router]);
   useEffect(() => { fetch('/api/provider/analytics').then(r => r.json()).then(setData); }, []);
 

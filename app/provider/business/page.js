@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import { FileUploader } from '@/components/file-uploader';
-import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map } from 'lucide-react';
+import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2 } from 'lucide-react';
 
 const PAYMENT_METHODS = ['UPI', 'Cash', 'Card', 'Net Banking', 'Razorpay', 'PayTM', 'PhonePe', 'Google Pay'];
 
@@ -30,21 +30,87 @@ export default function BusinessProfilePage() {
     banner: '', images: [],
     timings: { days: 'Mon - Sat', morning: '09:00 AM - 01:00 PM', evening: '05:00 PM - 09:00 PM', holiday: 'Sunday', open: '09:00 AM', close: '09:00 PM' },
     location: { lat: '', lng: '', embedUrl: '' },
-    specialization: '', qualification: '', experience: '',
+    doctorName: '', specialization: '', qualification: '', experience: '',
   });
   const [serviceInput, setServiceInput] = useState('');
   const [offerInput, setOfferInput] = useState('');
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+  const [postingJob, setPostingJob] = useState(false);
+  const [newJob, setNewJob] = useState({ title: '', type: 'Full-time', salary: '', experience: '', description: '' });
 
   useEffect(() => {
     if (!loading && !user) router.replace('/auth?next=/provider/business');
     else if (user && !['provider', 'admin', 'super_admin'].includes(user.role)) router.replace('/');
+    else if (user && user.role === 'provider' && !user.plan) router.replace('/provider/plan');
   }, [user, loading, router]);
 
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(d => setCats(d.categories || []));
     fetch('/api/locations').then(r => r.json()).then(setLocs);
     fetch('/api/provider/business').then(r => r.json()).then(d => { if (d.business) setB(prev => ({ ...prev, ...d.business, priceFrom: d.business.priceFrom || '', priceTo: d.business.priceTo || '', fees: d.business.fees || '', experience: d.business.experience || '', location: d.business.location || prev.location })); });
+    fetchJobs();
   }, []);
+
+  const fetchJobs = async () => {
+    setLoadingJobs(true);
+    try {
+      const r = await fetch('/api/provider/jobs');
+      const d = await r.json();
+      setJobs(d.items || []);
+    } catch (e) { console.error(e); }
+    finally { setLoadingJobs(false); }
+  };
+
+  const generateDescription = async () => {
+    if (!b.name || !b.categorySlug) { toast.error('Add business name and category first'); return; }
+    setGeneratingDesc(true);
+    try {
+      const r = await fetch('/api/provider/ai-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: b.name,
+          categoryName: selectedCat?.name || '',
+          city: b.city,
+          specialization: b.specialization,
+          qualification: b.qualification,
+          services: b.services,
+        }),
+      });
+      const d = await r.json();
+      if (r.ok && d.description) { setB(x => ({ ...x, description: d.description })); toast.success('AI description generated!'); }
+      else toast.error(d.error || d.detail || 'Failed to generate description');
+    } catch (e) { toast.error('Network error while generating description'); }
+    finally { setGeneratingDesc(false); }
+  };
+
+  const publishJob = async () => {
+    if (!newJob.title.trim()) { toast.error('Job title is required'); return; }
+    if (!b.name || !b.categorySlug || !b.city) { toast.error('Save your business profile before publishing a job'); return; }
+    setPostingJob(true);
+    try {
+      const r = await fetch('/api/provider/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newJob) });
+      const d = await r.json();
+      if (r.ok) {
+        toast.success('Job published!');
+        setNewJob({ title: '', type: 'Full-time', salary: '', experience: '', description: '' });
+        fetchJobs();
+      } else toast.error(d.error || d.detail || 'Failed to publish job');
+    } catch (e) { toast.error('Network error while publishing job'); }
+    finally { setPostingJob(false); }
+  };
+
+  const deleteJob = async (jobId) => {
+    if (!confirm('Remove this job listing?')) return;
+    try {
+      const r = await fetch(`/api/provider/jobs/${jobId}`, { method: 'DELETE' });
+      if (r.ok) { toast.success('Job removed'); fetchJobs(); }
+      else { const d = await r.json().catch(() => ({})); toast.error(d.error || d.detail || 'Failed to remove job'); }
+    } catch (e) { toast.error('Network error while removing job'); }
+  };
 
   useEffect(() => {
     if (b.state) fetch(`/api/locations?state=${encodeURIComponent(b.state)}`).then(r => r.json()).then(setLocs);
@@ -102,14 +168,23 @@ export default function BusinessProfilePage() {
             </Select>
           </div>
           <div>
-            <Label>Description</Label>
+            <div className="flex items-center justify-between">
+              <Label>Description</Label>
+              <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={generatingDesc} className="h-7 text-xs gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50">
+                {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                {generatingDesc ? 'Generating…' : 'Generate with AI'}
+              </Button>
+            </div>
             <Textarea className="mt-1" rows={4} value={b.description} onChange={e => setB({ ...b, description: e.target.value })} placeholder="Tell customers what makes your business special…" />
           </div>
           {isDoctor && (
-            <div className="grid sm:grid-cols-3 gap-3 pt-2 border-t">
-              <div><Label>Specialization</Label><Input className="mt-1" value={b.specialization} onChange={e => setB({ ...b, specialization: e.target.value })} placeholder="e.g., Cardiology" /></div>
-              <div><Label>Qualification</Label><Input className="mt-1" value={b.qualification} onChange={e => setB({ ...b, qualification: e.target.value })} placeholder="MBBS, MD" /></div>
-              <div><Label>Experience (yrs)</Label><Input className="mt-1" type="number" value={b.experience} onChange={e => setB({ ...b, experience: e.target.value })} /></div>
+            <div className="pt-2 border-t space-y-3">
+              <div><Label>Doctor Name</Label><Input className="mt-1" value={b.doctorName} onChange={e => setB({ ...b, doctorName: e.target.value })} placeholder="e.g., Dr. Rajesh Sharma" /></div>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div><Label>Specialization</Label><Input className="mt-1" value={b.specialization} onChange={e => setB({ ...b, specialization: e.target.value })} placeholder="e.g., Cardiology" /></div>
+                <div><Label>Qualification</Label><Input className="mt-1" value={b.qualification} onChange={e => setB({ ...b, qualification: e.target.value })} placeholder="MBBS, MD" /></div>
+                <div><Label>Experience (yrs)</Label><Input className="mt-1" type="number" value={b.experience} onChange={e => setB({ ...b, experience: e.target.value })} /></div>
+              </div>
             </div>
           )}
         </CardContent></Card>
@@ -149,21 +224,21 @@ export default function BusinessProfilePage() {
               <Label>State *</Label>
               <Select value={b.state} onValueChange={v => setB({ ...b, state: v, district: '', city: '', area: '' })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Choose state" /></SelectTrigger>
-                <SelectContent>{locs.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-72">{locs.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>District</Label>
               <Select value={b.district} onValueChange={v => setB({ ...b, district: v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="District" /></SelectTrigger>
-                <SelectContent>{locs.districts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-72">{locs.districts.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label>City *</Label>
               <Select value={b.city} onValueChange={v => setB({ ...b, city: v })}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="City" /></SelectTrigger>
-                <SelectContent>{locs.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-72">{locs.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
@@ -267,6 +342,55 @@ export default function BusinessProfilePage() {
             <div><Label>Razorpay Key ID (optional)</Label><Input className="mt-1" value={b.razorpayKeyId} onChange={e => setB({ ...b, razorpayKeyId: e.target.value })} placeholder="rzp_live_xxxxxxxxxx" /></div>
           </div>
           <div className="text-xs text-slate-500 flex gap-2 items-start"><Wallet className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Your UPI ID is shown on your profile so customers can pay directly. Razorpay Key ID is optional — add it if you want a “Pay Online” button on your booking flow.</span></div>
+        </CardContent></Card>
+
+        {/* JOB PUBLISH */}
+        <Card><CardContent className="p-5 space-y-4">
+          <div>
+            <h3 className="font-bold flex items-center gap-2"><Briefcase className="w-4 h-4" />Publish a Job Opening</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Hiring? Post a job opening — it appears on the Search2Service Jobs page under your business name.</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2"><Label>Job Title *</Label><Input className="mt-1" value={newJob.title} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="e.g., Front Desk Executive" /></div>
+            <div>
+              <Label>Job Type</Label>
+              <Select value={newJob.type} onValueChange={v => setNewJob({ ...newJob, type: v })}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Full-time">Full-time</SelectItem>
+                  <SelectItem value="Part-time">Part-time</SelectItem>
+                  <SelectItem value="Contract">Contract</SelectItem>
+                  <SelectItem value="Remote">Remote</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div><Label>Experience Required</Label><Input className="mt-1" value={newJob.experience} onChange={e => setNewJob({ ...newJob, experience: e.target.value })} placeholder="e.g., 1-3 yrs" /></div>
+            <div className="sm:col-span-2"><Label>Salary</Label><Input className="mt-1" value={newJob.salary} onChange={e => setNewJob({ ...newJob, salary: e.target.value })} placeholder="e.g., ₹15,000 - 25,000 / month" /></div>
+            <div className="sm:col-span-2"><Label>Job Description</Label><Textarea className="mt-1" rows={3} value={newJob.description} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Responsibilities, requirements, perks…" /></div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={publishJob} disabled={postingJob} className="bg-blue-600 hover:bg-blue-500 text-white">
+              {postingJob ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Briefcase className="w-4 h-4 mr-2" />}
+              {postingJob ? 'Publishing…' : 'Publish Job'}
+            </Button>
+          </div>
+
+          {jobs.length > 0 && (
+            <div className="pt-3 border-t space-y-2">
+              <Label>Your Published Jobs ({jobs.length})</Label>
+              {jobs.map(j => (
+                <div key={j.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                  <div>
+                    <div className="text-sm font-semibold">{j.title}</div>
+                    <div className="text-xs text-slate-500">{j.type} • {j.experience} • {j.salary}</div>
+                  </div>
+                  <button onClick={() => deleteJob(j.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+          {loadingJobs && jobs.length === 0 && <div className="text-xs text-slate-400">Loading your jobs…</div>}
         </CardContent></Card>
 
         <div className="flex justify-end pt-2">

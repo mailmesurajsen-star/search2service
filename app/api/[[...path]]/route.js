@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb, getFilesBucket } from '@/lib/mongodb';
-import { buildCategories, buildProviders, buildReviews, buildJobs, CATEGORY_ICONS, CATEGORY_GROUPS } from '@/lib/seed-data';
+import { buildCategories, buildProviders, buildReviews, buildJobs, buildHeroSlides, buildAds, CATEGORY_ICONS, CATEGORY_GROUPS } from '@/lib/seed-data';
+import { getAllStates, getCitiesByState, getDistrictsByState, getAreasByCity } from '@/lib/india-locations';
 import { v4 as uuid } from 'uuid';
 import { ObjectId } from 'mongodb';
 import { LlmChat, UserMessage } from 'emergentintegrations';
@@ -43,6 +44,18 @@ async function ensureSeed() {
     if (revs.length) await db.collection('reviews').insertMany(revs);
     const jobs = buildJobs();
     await db.collection('jobs').insertMany(jobs);
+  }
+  // Seed hero slides if empty
+  const slideCount = await db.collection('hero_slides').countDocuments();
+  if (slideCount === 0) {
+    const slides = buildHeroSlides();
+    await db.collection('hero_slides').insertMany(slides);
+  }
+  // Seed advertisements if empty
+  const adCount = await db.collection('advertisements').countDocuments();
+  if (adCount === 0) {
+    const ads = buildAds();
+    await db.collection('advertisements').insertMany(ads);
   }
   // Ensure default super admin exists
   const adminExists = await db.collection('users').findOne({ role: 'super_admin' });
@@ -165,52 +178,52 @@ async function handle(request, ctx) {
         id: existing?.id || uuid(),
         ownerId: user.id,
         ownerName: user.name,
-        name: (b.name || '').slice(0, 120),
-        description: (b.description || '').slice(0, 2000),
+        name: (b.name !== undefined ? b.name : (existing?.name || '')).slice(0, 120),
+        description: (b.description !== undefined ? b.description : (existing?.description || '')).slice(0, 2000),
         categoryId: cat?.id || existing?.categoryId || null,
         categoryName: cat?.name || existing?.categoryName || null,
         categorySlug: cat?.slug || existing?.categorySlug || null,
         group: cat?.group || existing?.group || null,
-        state: b.state || '',
-        district: b.district || '',
-        city: b.city || '',
-        area: b.area || '',
-        address: b.address || '',
-        phone: b.phone || user.phone || '',
-        whatsapp: b.whatsapp || b.phone || '',
-        email: b.email || user.email,
-        website: b.website || '',
-        services: Array.isArray(b.services) ? b.services.slice(0, 20).filter(Boolean) : [],
-        priceFrom: parseInt(b.priceFrom) || 0,
-        priceTo: parseInt(b.priceTo) || 0,
-        fees: parseInt(b.fees) || 0,
-        offers: Array.isArray(b.offers) ? b.offers.slice(0, 5).filter(Boolean) : [],
-        upi: b.upi || '',
-        razorpayKeyId: b.razorpayKeyId || '',
-        paymentMethods: Array.isArray(b.paymentMethods) ? b.paymentMethods : ['UPI', 'Cash'],
-        banner: b.banner || existing?.banner || '',
+        state: b.state !== undefined ? b.state : (existing?.state || ''),
+        district: b.district !== undefined ? b.district : (existing?.district || ''),
+        city: b.city !== undefined ? b.city : (existing?.city || ''),
+        area: b.area !== undefined ? b.area : (existing?.area || ''),
+        address: b.address !== undefined ? b.address : (existing?.address || ''),
+        phone: b.phone !== undefined ? b.phone : (existing?.phone || user.phone || ''),
+        whatsapp: b.whatsapp !== undefined ? b.whatsapp : (existing?.whatsapp || (b.phone !== undefined ? b.phone : (existing?.phone || ''))),
+        email: b.email !== undefined ? b.email : (existing?.email || user.email || ''),
+        website: b.website !== undefined ? b.website : (existing?.website || ''),
+        services: Array.isArray(b.services) ? b.services.slice(0, 20).filter(Boolean) : (existing?.services || []),
+        priceFrom: b.priceFrom !== undefined ? (parseInt(b.priceFrom) || 0) : (existing?.priceFrom || 0),
+        priceTo: b.priceTo !== undefined ? (parseInt(b.priceTo) || 0) : (existing?.priceTo || 0),
+        fees: b.fees !== undefined ? (parseInt(b.fees) || 0) : (existing?.fees || 0),
+        offers: Array.isArray(b.offers) ? b.offers.slice(0, 5).filter(Boolean) : (existing?.offers || []),
+        upi: b.upi !== undefined ? b.upi : (existing?.upi || ''),
+        razorpayKeyId: b.razorpayKeyId !== undefined ? b.razorpayKeyId : (existing?.razorpayKeyId || ''),
+        paymentMethods: Array.isArray(b.paymentMethods) ? b.paymentMethods : (existing?.paymentMethods || ['UPI', 'Cash']),
+        banner: b.banner !== undefined ? b.banner : (existing?.banner || ''),
         images: Array.isArray(b.images) ? b.images : (existing?.images || []),
         timings: {
-          days: b.timings?.days || 'Mon - Sat',
-          morning: b.timings?.morning || '09:00 AM - 01:00 PM',
-          evening: b.timings?.evening || '05:00 PM - 09:00 PM',
-          holiday: b.timings?.holiday || 'Sunday',
-          open: b.timings?.open || '09:00 AM',
-          close: b.timings?.close || '09:00 PM',
+          days: b.timings?.days || existing?.timings?.days || 'Mon - Sat',
+          morning: b.timings?.morning || existing?.timings?.morning || '09:00 AM - 01:00 PM',
+          evening: b.timings?.evening || existing?.timings?.evening || '05:00 PM - 09:00 PM',
+          holiday: b.timings?.holiday || existing?.timings?.holiday || 'Sunday',
+          open: b.timings?.open || existing?.timings?.open || '09:00 AM',
+          close: b.timings?.close || existing?.timings?.close || '09:00 PM',
         },
         location: {
-          lat: b.location?.lat ? parseFloat(b.location.lat) : null,
-          lng: b.location?.lng ? parseFloat(b.location.lng) : null,
-          embedUrl: b.location?.embedUrl || (b.address ? `https://maps.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed` : ''),
+          lat: b.location?.lat !== undefined ? parseFloat(b.location.lat) : (existing?.location?.lat !== undefined ? existing.location.lat : null),
+          lng: b.location?.lng !== undefined ? parseFloat(b.location.lng) : (existing?.location?.lng !== undefined ? existing.location.lng : null),
+          embedUrl: b.location?.embedUrl || existing?.location?.embedUrl || (b.address ? `https://maps.google.com/maps?q=${encodeURIComponent(b.address)}&output=embed` : (existing?.address ? `https://maps.google.com/maps?q=${encodeURIComponent(existing.address)}&output=embed` : '')),
         },
         rating: existing?.rating || 0,
         reviewCount: existing?.reviewCount || 0,
         verified: existing?.verified || false,
         premium: existing?.premium || false,
         featured: existing?.featured || false,
-        specialization: b.specialization || existing?.specialization || null,
-        qualification: b.qualification || existing?.qualification || null,
-        experience: b.experience ? parseInt(b.experience) : (existing?.experience || null),
+        specialization: b.specialization !== undefined ? b.specialization : (existing?.specialization || null),
+        qualification: b.qualification !== undefined ? b.qualification : (existing?.qualification || null),
+        experience: b.experience !== undefined ? (parseInt(b.experience) || null) : (existing?.experience || null),
         status: b.status || existing?.status || 'active',
         createdAt: existing?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -508,11 +521,29 @@ async function handle(request, ctx) {
 
     // GET /api/locations
     if (path === 'locations' && method === 'GET') {
-      const providers = await db.collection('providers').find({}, { projection: { state:1, district:1, city:1, area:1, _id:0 } }).toArray();
-      const states = [...new Set(providers.map(p => p.state).filter(Boolean))].sort();
-      const districts = [...new Set(providers.filter(p => !q.state || p.state === q.state).map(p => p.district).filter(Boolean))].sort();
-      const cities = [...new Set(providers.filter(p => (!q.state || p.state === q.state) && (!q.district || p.district === q.district)).map(p => p.city).filter(Boolean))].sort();
-      const areas = [...new Set(providers.filter(p => (!q.city || p.city === q.city)).map(p => p.area).filter(Boolean))].sort();
+      const [providers, dbLocs] = await Promise.all([
+        db.collection('providers').find({}, { projection: { state:1, district:1, city:1, area:1, _id:0 } }).toArray(),
+        db.collection('locations').find({ isActive: { $ne: false } }, { projection: { state:1, district:1, city:1, areas:1, _id:0 } }).toArray(),
+      ]);
+
+      const locSources = [...dbLocs, ...providers.map(p => ({ state: p.state, district: p.district, city: p.city, areas: p.area ? [p.area] : [] }))];
+      
+      const states = [...new Set([...getAllStates(), ...locSources.map(p => p.state).filter(Boolean)])].sort();
+      const districts = [...new Set([...getDistrictsByState(q.state), ...locSources.filter(p => !q.state || p.state === q.state).map(p => p.district).filter(Boolean)])].sort();
+      const cities = [...new Set([...getCitiesByState(q.state), ...locSources.filter(p => (!q.state || p.state === q.state) && (!q.district || p.district === q.district)).map(p => p.city).filter(Boolean)])].sort();
+      
+      const matchedAreas = [];
+      for (const item of locSources) {
+        if (!q.city || item.city === q.city) {
+          if (!q.state || item.state === q.state) {
+            if (item.areas && Array.isArray(item.areas)) {
+              matchedAreas.push(...item.areas);
+            }
+          }
+        }
+      }
+      const areas = [...new Set([...getAreasByCity(q.state, q.city), ...matchedAreas.filter(Boolean)])].sort();
+      
       return NextResponse.json({ states, districts, cities, areas });
     }
 
@@ -617,6 +648,510 @@ async function handle(request, ctx) {
       return NextResponse.json({ ok: true, review: doc });
     }
 
+    // GET /api/hero-slides (Public)
+    if (path === 'hero-slides' && method === 'GET') {
+      const items = await db.collection('hero_slides').find({ isActive: true }).sort({ order: 1, createdAt: -1 }).toArray();
+      return NextResponse.json({ slides: items.map(clean) });
+    }
+
+    // GET /api/admin/hero-slides
+    if (path === 'admin/hero-slides' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const items = await db.collection('hero_slides').find({}).sort({ order: 1, createdAt: -1 }).toArray();
+      return NextResponse.json({ slides: items.map(clean), total: items.length });
+    }
+
+    // POST /api/admin/hero-slides
+    if (path === 'admin/hero-slides' && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const body = await request.json();
+      const doc = {
+        id: uuid(),
+        title: body.title,
+        highlightText: body.highlightText || '',
+        badge: body.badge || '',
+        subtitle: body.subtitle || '',
+        imageUrl: body.imageUrl || '',
+        overlayGradient: body.overlayGradient || 'from-blue-950/90 via-blue-900/85 to-orange-800/80',
+        ctaText: body.ctaText || '',
+        ctaLink: body.ctaLink || '',
+        order: parseInt(body.order) || 1,
+        isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await db.collection('hero_slides').insertOne(doc);
+      return NextResponse.json({ ok: true, slide: clean(doc) }, { status: 201 });
+    }
+
+    // PATCH /api/admin/hero-slides/:slideId
+    if (path.startsWith('admin/hero-slides/') && method === 'PATCH' && path !== 'admin/hero-slides/reorder') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const slideId = path.split('/')[2];
+      const body = await request.json();
+      const updates = { ...body, updatedAt: new Date().toISOString() };
+      delete updates.id;
+      delete updates._id;
+      if (updates.order !== undefined) updates.order = parseInt(updates.order);
+      await db.collection('hero_slides').updateOne({ id: slideId }, { $set: updates });
+      const updated = await db.collection('hero_slides').findOne({ id: slideId });
+      return NextResponse.json({ ok: true, slide: clean(updated) });
+    }
+
+    // DELETE /api/admin/hero-slides/:slideId
+    if (path.startsWith('admin/hero-slides/') && method === 'DELETE') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const slideId = path.split('/')[2];
+      await db.collection('hero_slides').deleteOne({ id: slideId });
+      return NextResponse.json({ ok: true, message: 'Hero slide deleted' });
+    }
+
+    // POST /api/admin/hero-slides/reorder
+    if (path === 'admin/hero-slides/reorder' && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const body = await request.json();
+      const slideOrders = body.slideOrders || [];
+      for (const item of slideOrders) {
+        if (item.id && item.order !== undefined) {
+          await db.collection('hero_slides').updateOne({ id: item.id }, { $set: { order: parseInt(item.order), updatedAt: new Date().toISOString() } });
+        }
+      }
+      return NextResponse.json({ ok: true, message: 'Slides reordered' });
+    }
+
+    // ---------------------------------------------------------
+    // ADS / ADVERTISEMENTS ENDPOINTS
+    // ---------------------------------------------------------
+    // GET /api/ads (Public)
+    if (path === 'ads' && method === 'GET') {
+      const placement = q.placement;
+      const statusVal = q.status || 'active';
+      const limit = Math.min(100, Math.max(1, parseInt(q.limit) || 20));
+
+      const filter = {};
+      if (statusVal && statusVal !== 'all') filter.status = statusVal;
+      if (placement && placement !== 'all') filter.placement = placement;
+
+      if (statusVal === 'active') {
+        const todayStr = new Date().toISOString().split('T')[0];
+        filter.$and = [
+          { $or: [{ startDate: null }, { startDate: '' }, { startDate: { $lte: todayStr } }] },
+          { $or: [{ endDate: null }, { endDate: '' }, { endDate: { $gte: todayStr } }] }
+        ];
+      }
+
+      const items = await db.collection('advertisements').find(filter).sort({ priority: 1, createdAt: -1 }).limit(limit).toArray();
+      return NextResponse.json({ ads: items.map(clean), count: items.length });
+    }
+
+    // POST /api/ads/:id/impression
+    if (path.startsWith('ads/') && path.endsWith('/impression') && method === 'POST') {
+      const adId = path.split('/')[1];
+      await db.collection('advertisements').updateOne({ id: adId }, { $inc: { impressions: 1 } });
+      return NextResponse.json({ ok: true, adId });
+    }
+
+    // POST /api/ads/:id/click
+    if (path.startsWith('ads/') && path.endsWith('/click') && method === 'POST') {
+      const adId = path.split('/')[1];
+      await db.collection('advertisements').updateOne({ id: adId }, { $inc: { clicks: 1 } });
+      return NextResponse.json({ ok: true, adId });
+    }
+
+    // GET /api/admin/ads
+    if (path === 'admin/ads' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+
+      const filter = {};
+      if (q.placement && q.placement !== 'all') filter.placement = q.placement;
+      if (q.status && q.status !== 'all') filter.status = q.status;
+      if (q.q && q.q.trim()) {
+        const rx = new RegExp(q.q.trim(), 'i');
+        filter.$or = [
+          { title: rx },
+          { subtitle: rx },
+          { advertiserName: rx },
+          { advertiserPhone: rx },
+          { targetUrl: rx },
+          { badge: rx },
+        ];
+      }
+
+      const limit = Math.min(200, Math.max(1, parseInt(q.limit) || 50));
+      const skip = Math.max(0, parseInt(q.skip) || 0);
+
+      let sort = { priority: 1, createdAt: -1 };
+      if (q.sort === 'newest') sort = { createdAt: -1 };
+      else if (q.sort === 'clicks') sort = { clicks: -1, createdAt: -1 };
+      else if (q.sort === 'impressions') sort = { impressions: -1, createdAt: -1 };
+      else if (q.sort === 'title') sort = { title: 1 };
+
+      const items = await db.collection('advertisements').find(filter).sort(sort).skip(skip).limit(limit).toArray();
+      const total = await db.collection('advertisements').countDocuments(filter);
+
+      const allAds = await db.collection('advertisements').find({}).toArray();
+      const totalImpressions = allAds.reduce((acc, a) => acc + (a.impressions || 0), 0);
+      const totalClicks = allAds.reduce((acc, a) => acc + (a.clicks || 0), 0);
+      const activeCount = allAds.filter(a => a.status === 'active').length;
+      const inactiveCount = allAds.filter(a => a.status !== 'active').length;
+      const avgCtr = totalImpressions > 0 ? parseFloat(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0;
+
+      return NextResponse.json({
+        items: items.map(clean),
+        total,
+        page: Math.floor(skip / limit) + 1,
+        limit,
+        stats: {
+          totalAds: allAds.length,
+          activeAds: activeCount,
+          inactiveAds: inactiveCount,
+          totalImpressions,
+          totalClicks,
+          averageCTR: avgCtr
+        }
+      });
+    }
+
+    // POST /api/admin/ads
+    if (path === 'admin/ads' && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const body = await request.json();
+      const nowIso = new Date().toISOString();
+      const todayStr = nowIso.split('T')[0];
+
+      const doc = {
+        id: uuid(),
+        title: body.title || 'Untitled Ad',
+        subtitle: body.subtitle || '',
+        imageUrl: body.imageUrl || '',
+        targetUrl: body.targetUrl || '/',
+        placement: body.placement || 'homepage_banner',
+        badge: body.badge || 'Sponsored',
+        ctaText: body.ctaText || 'Explore Now',
+        advertiserName: body.advertiserName || '',
+        advertiserPhone: body.advertiserPhone || '',
+        gradient: body.gradient || 'from-blue-600 via-indigo-600 to-orange-500',
+        startDate: body.startDate || todayStr,
+        endDate: body.endDate || '',
+        status: body.status || 'active',
+        priority: parseInt(body.priority) || 1,
+        impressions: 0,
+        clicks: 0,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      await db.collection('advertisements').insertOne(doc);
+      return NextResponse.json({ ok: true, ad: clean(doc) }, { status: 201 });
+    }
+
+    // PATCH / PUT /api/admin/ads/:id
+    if (path.startsWith('admin/ads/') && (method === 'PATCH' || method === 'PUT') && path !== 'admin/ads/reorder') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const adId = path.split('/')[2];
+      const body = await request.json();
+      const updates = { ...body, updatedAt: new Date().toISOString() };
+      delete updates.id;
+      delete updates._id;
+      if (updates.priority !== undefined) updates.priority = parseInt(updates.priority);
+
+      await db.collection('advertisements').updateOne({ id: adId }, { $set: updates });
+      const updated = await db.collection('advertisements').findOne({ id: adId });
+      return NextResponse.json({ ok: true, ad: clean(updated) });
+    }
+
+    // DELETE /api/admin/ads/:id
+    if (path.startsWith('admin/ads/') && method === 'DELETE') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const adId = path.split('/')[2];
+      await db.collection('advertisements').deleteOne({ id: adId });
+      return NextResponse.json({ ok: true, deletedId: adId, message: 'Advertisement deleted successfully' });
+    }
+
+    // POST /api/admin/ads/reorder
+    if (path === 'admin/ads/reorder' && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const body = await request.json();
+      const adOrders = body.adOrders || [];
+      for (const item of adOrders) {
+        if (item.id && item.priority !== undefined) {
+          await db.collection('advertisements').updateOne(
+            { id: item.id },
+            { $set: { priority: parseInt(item.priority), updatedAt: new Date().toISOString() } }
+          );
+        }
+      }
+      return NextResponse.json({ ok: true, message: 'Ads priority reordered successfully' });
+    }
+
+    // ---------------------------------------------------------
+    // ADMIN LOCATION MANAGEMENT ENDPOINTS
+    // ---------------------------------------------------------
+    // GET /api/admin/locations
+    if (path === 'admin/locations' && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+
+      // Check if db.locations is empty and populate if needed
+      const locCount = await db.collection('locations').countDocuments({});
+      if (locCount === 0) {
+        const seedLocs = INDIA_LOCATIONS.map(l => ({
+          id: uuidv4(),
+          state: l.state,
+          district: l.district,
+          city: l.city,
+          areas: l.areas || [],
+          pincode: '',
+          tier: 'Tier 2',
+          isActive: true,
+          isCustom: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+        if (seedLocs.length > 0) await db.collection('locations').insertMany(seedLocs);
+      }
+
+      const filter = {};
+      if (q.state && q.state !== 'all') filter.state = new RegExp(`^${q.state.trim()}$`, 'i');
+      if (q.status === 'active') filter.isActive = true;
+      if (q.status === 'inactive') filter.isActive = false;
+      if (q.status === 'custom') filter.isCustom = true;
+
+      if (q.q && q.q.trim()) {
+        const rx = new RegExp(q.q.trim(), 'i');
+        filter.$or = [{ city: rx }, { district: rx }, { state: rx }, { areas: rx }, { pincode: rx }];
+      }
+
+      const limit = Math.min(500, Math.max(1, parseInt(q.limit) || 100));
+      const skip = Math.max(0, parseInt(q.skip) || 0);
+
+      const [items, total, providers, allLocs] = await Promise.all([
+        db.collection('locations').find(filter).sort({ state: 1, city: 1 }).skip(skip).limit(limit).toArray(),
+        db.collection('locations').countDocuments(filter),
+        db.collection('providers').find({}, { projection: { city: 1 } }).toArray(),
+        db.collection('locations').find({}, { projection: { state: 1, district: 1, city: 1, areas: 1, isCustom: 1 } }).toArray(),
+      ]);
+
+      const cityCountMap = {};
+      for (const p of providers) {
+        const c = (p.city || '').trim().toLowerCase();
+        if (c) cityCountMap[c] = (cityCountMap[c] || 0) + 1;
+      }
+
+      const cleanedItems = items.map(clean).map(item => ({
+        ...item,
+        providerCount: cityCountMap[(item.city || '').trim().toLowerCase()] || 0
+      }));
+
+      const allStates = [...new Set(allLocs.map(l => (l.state || '').trim()).filter(Boolean))].sort();
+      const allDistricts = new Set(allLocs.map(l => (l.district || '').trim()).filter(Boolean));
+      const allCities = new Set(allLocs.map(l => (l.city || '').trim()).filter(Boolean));
+      const totalAreas = allLocs.reduce((acc, l) => acc + (Array.isArray(l.areas) ? l.areas.length : 0), 0);
+      const customCount = allLocs.filter(l => l.isCustom).length;
+
+      return NextResponse.json({
+        items: cleanedItems,
+        total,
+        states: allStates,
+        stats: {
+          totalStates: allStates.length,
+          totalDistricts: allDistricts.size,
+          totalCities: allCities.size,
+          totalAreas,
+          customLocations: customCount,
+        }
+      });
+    }
+
+    // POST /api/admin/locations
+    if (path === 'admin/locations' && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+
+      const body = await request.json();
+      const state = (body.state || '').trim();
+      const city = (body.city || '').trim();
+      const district = (body.district || '').trim() || city;
+
+      if (!state || !city) {
+        return NextResponse.json({ error: 'State and City are required' }, { status: 400 });
+      }
+
+      const rawAreas = Array.isArray(body.areas) ? body.areas : typeof body.areas === 'string' ? body.areas.split(',') : [];
+      const areas = [...new Set(rawAreas.map(a => (typeof a === 'string' ? a.trim() : '')).filter(Boolean))];
+
+      const existing = await db.collection('locations').findOne({
+        state: new RegExp(`^${state}$`, 'i'),
+        city: new RegExp(`^${city}$`, 'i')
+      });
+
+      if (existing) {
+        const mergedAreas = [...new Set([...(existing.areas || []), ...areas])];
+        const updates = {
+          district: district || existing.district || '',
+          areas: mergedAreas,
+          pincode: (body.pincode || existing.pincode || '').trim(),
+          tier: body.tier || existing.tier || 'Tier 2',
+          isActive: body.isActive !== undefined ? body.isActive : existing.isActive,
+          updatedAt: new Date().toISOString(),
+        };
+        await db.collection('locations').updateOne({ id: existing.id }, { $set: updates });
+        const updated = await db.collection('locations').findOne({ id: existing.id });
+        return NextResponse.json({ ok: true, location: clean(updated), message: `Updated existing location for ${city}, ${state}` });
+      }
+
+      const nowIso = new Date().toISOString();
+      const doc = {
+        id: uuidv4(),
+        state,
+        district,
+        city,
+        areas,
+        pincode: (body.pincode || '').trim(),
+        tier: body.tier || 'Tier 2',
+        isActive: body.isActive !== undefined ? body.isActive : true,
+        isCustom: true,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+
+      await db.collection('locations').insertOne(doc);
+      return NextResponse.json({ ok: true, location: clean(doc), message: `Location ${city}, ${state} created successfully` }, { status: 201 });
+    }
+
+    // GET /api/admin/locations/:id
+    if (path.startsWith('admin/locations/') && method === 'GET') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const locId = path.split('/')[2];
+      const loc = await db.collection('locations').findOne({ id: locId });
+      if (!loc) return NextResponse.json({ error: 'Location not found' }, { status: 404 });
+      return NextResponse.json({ ok: true, location: clean(loc) });
+    }
+
+    // PUT / PATCH /api/admin/locations/:id
+    if (path.startsWith('admin/locations/') && (method === 'PUT' || method === 'PATCH') && !path.includes('/areas')) {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const locId = path.split('/')[2];
+      const body = await request.json();
+
+      const updates = { updatedAt: new Date().toISOString() };
+      if (body.state !== undefined) updates.state = body.state.trim();
+      if (body.district !== undefined) updates.district = body.district.trim();
+      if (body.city !== undefined) updates.city = body.city.trim();
+      if (body.areas !== undefined) {
+        const raw = Array.isArray(body.areas) ? body.areas : typeof body.areas === 'string' ? body.areas.split(',') : [];
+        updates.areas = [...new Set(raw.map(a => (typeof a === 'string' ? a.trim() : '')).filter(Boolean))];
+      }
+      if (body.pincode !== undefined) updates.pincode = body.pincode.trim();
+      if (body.tier !== undefined) updates.tier = body.tier;
+      if (body.isActive !== undefined) updates.isActive = body.isActive;
+
+      await db.collection('locations').updateOne({ id: locId }, { $set: updates });
+      const updated = await db.collection('locations').findOne({ id: locId });
+      return NextResponse.json({ ok: true, location: clean(updated), message: 'Location updated successfully' });
+    }
+
+    // DELETE /api/admin/locations/:id
+    if (path.startsWith('admin/locations/') && method === 'DELETE' && !path.includes('/areas/')) {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const locId = path.split('/')[2];
+      await db.collection('locations').deleteOne({ id: locId });
+      return NextResponse.json({ ok: true, message: 'Location deleted successfully' });
+    }
+
+    // POST /api/admin/locations/:id/areas
+    if (path.startsWith('admin/locations/') && path.endsWith('/areas') && method === 'POST') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const locId = path.split('/')[2];
+      const body = await request.json();
+      const areaName = (body.area || '').trim();
+      if (!areaName) return NextResponse.json({ error: 'Area name cannot be blank' }, { status: 400 });
+
+      const loc = await db.collection('locations').findOne({ id: locId });
+      if (!loc) return NextResponse.json({ error: 'Location not found' }, { status: 404 });
+
+      const currentAreas = loc.areas || [];
+      if (!currentAreas.includes(areaName)) {
+        currentAreas.push(areaName);
+        await db.collection('locations').updateOne(
+          { id: locId },
+          { $set: { areas: currentAreas, updatedAt: new Date().toISOString() } }
+        );
+      }
+
+      const updated = await db.collection('locations').findOne({ id: locId });
+      return NextResponse.json({ ok: true, location: clean(updated), message: `Area '${areaName}' added to ${loc.city}` });
+    }
+
+    // DELETE /api/admin/locations/:id/areas/:area
+    if (path.startsWith('admin/locations/') && path.includes('/areas/') && method === 'DELETE') {
+      const user = await getCurrentUser(request);
+      if (!user || !['admin', 'super_admin', 'state_manager', 'district_manager'].includes(user.role)) {
+        return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+      }
+      const parts = path.split('/');
+      const locId = parts[2];
+      const areaName = decodeURIComponent(parts[4] || '').trim();
+
+      const loc = await db.collection('locations').findOne({ id: locId });
+      if (!loc) return NextResponse.json({ error: 'Location not found' }, { status: 404 });
+
+      const currentAreas = (loc.areas || []).filter(a => a.toLowerCase() !== areaName.toLowerCase());
+      await db.collection('locations').updateOne(
+        { id: locId },
+        { $set: { areas: currentAreas, updatedAt: new Date().toISOString() } }
+      );
+
+      const updated = await db.collection('locations').findOne({ id: locId });
+      return NextResponse.json({ ok: true, location: clean(updated), message: `Area removed from ${loc.city}` });
+    }
+
     return NextResponse.json({ error: 'Not found', path, method }, { status: 404 });
   } catch (e) {
     console.error('API error', e);
@@ -627,6 +1162,8 @@ async function handle(request, ctx) {
 export const GET = handle;
 export const POST = handle;
 export const PUT = handle;
+export const PATCH = handle;
 export const DELETE = handle;
 export const HEAD = handle;
 export const dynamic = 'force-dynamic';
+

@@ -26,6 +26,7 @@ export default function ProviderBookingsPage() {
   useEffect(() => {
     if (!loading && !user) router.replace('/auth?next=/provider/bookings');
     else if (user && !['provider', 'admin', 'super_admin'].includes(user.role)) router.replace('/');
+    else if (user && user.role === 'provider' && !user.plan) router.replace('/provider/plan');
   }, [user, loading, router]);
 
   const load = () => fetch('/api/provider/bookings').then(r => r.json()).then(d => { setItems(d.items || []); setStats(d.stats || {}); });

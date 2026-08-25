@@ -108,12 +108,19 @@ user_problem_statement: |
 backend:
   - task: "Provider Portal APIs: business CRUD, media, bookings, analytics, POST /api/bookings"
     implemented: true
-    working: false
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          Fixed the two critical bugs identified during testing:
+          1. Exported the PATCH method handler in route.js (`export const PATCH = handle;`).
+          2. Updated the fields fallback logic in PUT /api/provider/business to preserve existing provider details on partial updates.
+          Also, cleared the stale Next.js cache by deleting the `.next` directory to resolve the dev server compilation error "Failed to generate static paths for /api/[[...path]]".
       - working: "NA"
         agent: "main"
         comment: |

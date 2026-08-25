@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/use-auth';
-import { Store, Users, ClipboardList, Star, Image as ImageIcon, TrendingUp, Wallet, LogOut, Sparkles, ExternalLink } from 'lucide-react';
+import { Store, Users, ClipboardList, Star, Image as ImageIcon, TrendingUp, Wallet, LogOut, Sparkles, ExternalLink, Crown } from 'lucide-react';
 
 export default function ProviderDashboard() {
   const { user, loading, logout } = useAuth();
@@ -17,6 +17,7 @@ export default function ProviderDashboard() {
   useEffect(() => {
     if (!loading && !user) router.replace('/auth?next=/provider/dashboard');
     else if (user && !['provider', 'admin', 'super_admin'].includes(user.role)) router.replace('/');
+    else if (user && user.role === 'provider' && !user.plan) router.replace('/provider/plan');
   }, [user, loading, router]);
 
   useEffect(() => {
@@ -65,6 +66,28 @@ export default function ProviderDashboard() {
           </CardContent>
         </Card>
 
+        {(user.plan || 'basic') === 'basic' ? (
+          <Card className="mb-6 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+            <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-red-600 grid place-items-center text-white flex-shrink-0"><Crown className="w-5 h-5" /></div>
+                <div>
+                  <div className="font-semibold text-sm">You're on the Basic (Free) plan</div>
+                  <div className="text-xs text-slate-500">Upgrade to Premium for priority placement, unlimited photos & the PREMIUM badge.</div>
+                </div>
+              </div>
+              <Link href="/provider/plan"><Button size="sm" className="bg-gradient-to-r from-amber-500 to-red-600 hover:opacity-90 text-white whitespace-nowrap">View Plans</Button></Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="mb-6 border-emerald-200 bg-emerald-50">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><Crown className="w-4 h-4" />You're on the Premium plan — priority placement active</div>
+              <Link href="/provider/plan"><Button size="sm" variant="outline" className="text-xs">Manage Plan</Button></Link>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {stats.map(s => (
             <Card key={s.label}><CardContent className="p-5">
@@ -81,6 +104,7 @@ export default function ProviderDashboard() {
             { href: '/provider/bookings', icon: ClipboardList, title: 'Booking Manager', desc: `View and confirm incoming appointments${bookingStats.pending ? ` — ${bookingStats.pending} pending` : ''}`, color: 'from-emerald-500 to-teal-700' },
             { href: '/provider/gallery', icon: ImageIcon, title: 'Gallery & Media', desc: 'Upload photos, videos and offer banners', color: 'from-fuchsia-500 to-purple-700' },
             { href: '/provider/analytics', icon: TrendingUp, title: 'Analytics', desc: 'Track views, clicks, and conversion trends', color: 'from-amber-500 to-orange-700' },
+            { href: '/provider/plan', icon: Crown, title: 'Subscription Plan', desc: `Currently on ${(user.plan || 'basic') === 'premium' ? 'Premium' : 'Basic (Free)'} — upgrade or manage your plan`, color: 'from-amber-500 to-red-600' },
           ].map(t => (
             <Link key={t.title} href={t.href}>
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">

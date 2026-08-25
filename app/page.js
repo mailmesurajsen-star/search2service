@@ -9,10 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ConciergeChat } from '@/components/concierge-chat';
-import { useAuth } from '@/lib/use-auth';
+import { AdBanner } from '@/components/ad-banner';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
 import {
   Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
-  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
+  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, ChevronLeft, Download, Smartphone,
   Verified, TrendingUp, Clock, HeartHandshake, Award, Users, Building2, IndianRupee,
   Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
   Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
@@ -39,7 +41,6 @@ function Icon({ name, className }) {
 
 export default function App() {
   const router = useRouter();
-  const { user, logout } = useAuth();
   const [q, setQ] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
@@ -55,34 +56,52 @@ export default function App() {
   const [testimonials, setTestimonials] = useState([]);
   const [stats, setStats] = useState({ providers: 0, doctors: 0, categories: 0, customers: 0 });
 
+  // Hero Slider State
+  const [heroSlides, setHeroSlides] = useState([]);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSliderPaused, setIsSliderPaused] = useState(false);
+
   useEffect(() => {
     (async () => {
-      const [locs, pop, grp, feat, docs, hot, rest, govs, jobsR, tests, st] = await Promise.all([
-        fetch('/api/locations').then(r => r.json()),
-        fetch('/api/categories?popular=true').then(r => r.json()),
-        fetch('/api/categories?grouped=true').then(r => r.json()),
-        fetch('/api/providers?premium=true&limit=8').then(r => r.json()),
-        fetch('/api/doctors?limit=8').then(r => r.json()),
-        fetch('/api/hotels?limit=6').then(r => r.json()),
-        fetch('/api/restaurants?limit=6').then(r => r.json()),
-        fetch('/api/gov-services').then(r => r.json()),
-        fetch('/api/jobs?limit=6').then(r => r.json()),
-        fetch('/api/reviews/recent').then(r => r.json()),
-        fetch('/api/stats').then(r => r.json()),
+      const [locs, pop, grp, feat, docs, hot, rest, govs, jobsR, tests, st, slidesRes] = await Promise.all([
+        fetch('/api/locations').then(r => r.json()).catch(() => ({})),
+        fetch('/api/categories?popular=true').then(r => r.json()).catch(() => ({})),
+        fetch('/api/categories?grouped=true').then(r => r.json()).catch(() => ({})),
+        fetch('/api/providers?premium=true&limit=8').then(r => r.json()).catch(() => ({})),
+        fetch('/api/doctors?limit=8').then(r => r.json()).catch(() => ({})),
+        fetch('/api/hotels?limit=6').then(r => r.json()).catch(() => ({})),
+        fetch('/api/restaurants?limit=6').then(r => r.json()).catch(() => ({})),
+        fetch('/api/gov-services').then(r => r.json()).catch(() => ({})),
+        fetch('/api/jobs?limit=6').then(r => r.json()).catch(() => ({})),
+        fetch('/api/reviews/recent').then(r => r.json()).catch(() => ({})),
+        fetch('/api/stats').then(r => r.json()).catch(() => ({})),
+        fetch('/api/hero-slides').then(r => r.json()).catch(() => ({ slides: [] })),
       ]);
-      setLocations({ states: locs.states || [], cities: locs.cities || [] });
-      setPopularCats(pop.categories || []);
-      setGroupedCats(grp.groups || {});
-      setFeatured(feat.items || []);
-      setDoctors(docs.items || []);
-      setHotels(hot.items || []);
-      setRestaurants(rest.items || []);
-      setGov(govs.items || []);
-      setJobs(jobsR.items || []);
-      setTestimonials(tests.items || []);
-      setStats(st);
+      setLocations({ states: locs?.states || [], cities: locs?.cities || [] });
+      setPopularCats(pop?.categories || []);
+      setGroupedCats(grp?.groups || {});
+      setFeatured(feat?.items || []);
+      setDoctors(docs?.items || []);
+      setHotels(hot?.items || []);
+      setRestaurants(rest?.items || []);
+      setGov(govs?.items || []);
+      setJobs(jobsR?.items || []);
+      setTestimonials(tests?.items || []);
+      if (st) setStats(st);
+      if (slidesRes?.slides && slidesRes.slides.length > 0) {
+        setHeroSlides(slidesRes.slides);
+      }
     })();
   }, []);
+
+  // Slider Auto-Advance Effect (Every 6 seconds)
+  useEffect(() => {
+    if (!heroSlides || heroSlides.length <= 1 || isSliderPaused) return;
+    const timer = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroSlides, isSliderPaused]);
 
   const doSearch = () => {
     const params = new URLSearchParams();
@@ -95,108 +114,207 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       {/* NAVBAR */}
-      <header className="sticky top-0 z-50 backdrop-blur bg-white/85 border-b border-slate-200">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-orange-500 grid place-items-center text-white font-bold">S2</div>
-            <div>
-              <div className="font-bold text-lg leading-none">Search2Service</div>
-              <div className="text-[10px] text-muted-foreground">One platform for every service</div>
-            </div>
-          </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link href="/categories" className="hover:text-blue-600">Categories</Link>
-            <Link href="/search?group=Healthcare" className="hover:text-blue-600">Doctors</Link>
-            <Link href="/search?category=hotel" className="hover:text-blue-600">Hotels</Link>
-            <Link href="/search?group=Job+%26+Career" className="hover:text-blue-600">Jobs</Link>
-            <Link href="/search?group=Government+Services" className="hover:text-blue-600">Gov Services</Link>
-            <Link href="/upload" className="hover:text-blue-600">Upload</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            {user ? (
-              <>
-                <Link href={
-                  user.role === 'provider' ? '/provider/dashboard' :
-                  (user.role === 'admin' || user.role === 'super_admin') ? '/admin/dashboard' :
-                  '/customer/dashboard'
-                }>
-                  <Button variant="ghost" size="sm" className="hidden sm:inline-flex">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 grid place-items-center text-white text-xs font-bold mr-1.5">{user.name[0]}</div>
-                    {user.name.split(' ')[0]}
-                  </Button>
-                </Link>
-                <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push('/'); }}>Sign out</Button>
-              </>
+      <SiteHeader />
+
+      {/* HERO SLIDER SECTION */}
+      {(() => {
+        const activeSlide = (heroSlides && heroSlides.length > 0 && heroSlides[currentSlide]) ? heroSlides[currentSlide] : {
+          badge: '🇮🇳 India’s Complete Services Marketplace',
+          title: 'Find trusted services',
+          highlightText: 'near you — in seconds.',
+          subtitle: 'Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.',
+          imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
+          overlayGradient: 'from-blue-950/90 via-blue-900/85 to-orange-800/80',
+          ctaText: 'Explore Categories',
+          ctaLink: '/categories',
+        };
+
+        return (
+          <section
+            className="relative overflow-hidden group min-h-[580px] md:min-h-[640px] flex items-center"
+            onMouseEnter={() => setIsSliderPaused(true)}
+            onMouseLeave={() => setIsSliderPaused(false)}
+          >
+            {/* Background Slides with Cross-Fade */}
+            {heroSlides.length > 0 ? (
+              heroSlides.map((slide, idx) => (
+                <div
+                  key={slide.id || idx}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    idx === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10 pointer-events-none'
+                  }`}
+                >
+                  <div
+                    className={`absolute inset-0 bg-cover bg-center transition-transform duration-7000 ease-out ${
+                      idx === currentSlide ? 'scale-100' : 'scale-105'
+                    }`}
+                    style={{ backgroundImage: `url(${slide.imageUrl})` }}
+                  />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${slide.overlayGradient || 'from-blue-950/90 via-blue-900/85 to-orange-800/80'}`} />
+                </div>
+              ))
             ) : (
+              <div className="absolute inset-0 z-0">
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${activeSlide.imageUrl})` }}
+                />
+                <div className={`absolute inset-0 bg-gradient-to-br ${activeSlide.overlayGradient}`} />
+              </div>
+            )}
+
+            {/* Previous / Next Arrow Controls */}
+            {heroSlides.length > 1 && (
               <>
-                <Link href="/auth?mode=login"><Button variant="ghost" size="sm" className="hidden sm:inline-flex">Login</Button></Link>
-                <Link href="/auth?mode=register&role=provider"><Button size="sm" className="bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white">List Business</Button></Link>
+                <button
+                  type="button"
+                  onClick={() => setCurrentSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length)}
+                  className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 grid place-items-center transition-all opacity-80 hover:opacity-100 hover:scale-110 shadow-lg"
+                  aria-label="Previous Slide"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrentSlide((currentSlide + 1) % heroSlides.length)}
+                  className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 grid place-items-center transition-all opacity-80 hover:opacity-100 hover:scale-110 shadow-lg"
+                  aria-label="Next Slide"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
               </>
             )}
-          </div>
-        </div>
-      </header>
 
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url(https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg)' }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-blue-800/85 to-orange-700/80" />
-        <div className="relative container mx-auto px-4 py-16 md:py-24">
-          <div className="max-w-3xl text-white">
-            <Badge className="bg-white/15 text-white border-white/30 backdrop-blur mb-4 hover:bg-white/20">🇮🇳 India’s Complete Services Marketplace</Badge>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">Find trusted services<br /><span className="bg-gradient-to-r from-orange-300 to-yellow-200 bg-clip-text text-transparent">near you — in seconds.</span></h1>
-            <p className="text-lg text-blue-50 max-w-2xl mb-8">Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.</p>
+            <div className="relative z-10 container mx-auto px-4 py-12 md:py-20">
+              <div className="max-w-4xl text-white">
+                {/* Dynamic Badge */}
+                {activeSlide.badge && (
+                  <div className="inline-flex items-center gap-1.5 bg-white/15 text-white border border-white/30 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-semibold mb-4 shadow-sm animate-fadeIn">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    {activeSlide.badge}
+                  </div>
+                )}
 
-            <Card className="bg-white/95 backdrop-blur shadow-2xl border-0">
-              <CardContent className="p-4 md:p-5">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                  <div className="md:col-span-5 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <Input placeholder="Search services, doctors, businesses..." className="pl-10 h-12 text-base border-slate-200" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && doSearch()} />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Select value={state} onValueChange={setState}>
-                      <SelectTrigger className="h-12"><MapPin className="w-4 h-4 mr-2 text-slate-400" /><SelectValue placeholder="State" /></SelectTrigger>
-                      <SelectContent>{locations.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Select value={city} onValueChange={setCity}>
-                      <SelectTrigger className="h-12"><SelectValue placeholder="City" /></SelectTrigger>
-                      <SelectContent>{locations.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Button className="w-full h-12 bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white text-base font-semibold" onClick={doSearch}><Search className="w-4 h-4 mr-2" />Search</Button>
-                  </div>
+                {/* Dynamic Title & Highlight */}
+                <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight mb-4 drop-shadow-sm transition-all">
+                  {activeSlide.title}{' '}
+                  {activeSlide.highlightText && (
+                    <>
+                      <br className="hidden sm:inline" />
+                      <span className="bg-gradient-to-r from-orange-300 via-amber-200 to-yellow-200 bg-clip-text text-transparent">
+                        {activeSlide.highlightText}
+                      </span>
+                    </>
+                  )}
+                </h1>
+
+                {/* Subtitle & Optional CTA Button */}
+                <div className="flex flex-wrap items-center gap-4 mb-8">
+                  {activeSlide.subtitle && (
+                    <p className="text-base sm:text-lg text-blue-50/95 max-w-2xl leading-relaxed">
+                      {activeSlide.subtitle}
+                    </p>
+                  )}
+                  {activeSlide.ctaText && (
+                    <Link href={activeSlide.ctaLink || '/categories'}>
+                      <Button size="sm" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs px-4 h-9 shadow-md shadow-orange-500/20 gap-1.5">
+                        {activeSlide.ctaText} <ChevronRight className="w-3.5 h-3.5" />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-                  <span>Popular:</span>
-                  {['Electrician','Doctor','AC Repair','Beauty Parlour','Plumber','Photographer'].map(t => (
-                    <button key={t} onClick={() => { setQ(t); setTimeout(doSearch, 50); }} className="underline underline-offset-2 hover:text-blue-600">{t}</button>
+
+                {/* Search Box Card */}
+                <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-0">
+                  <CardContent className="p-4 md:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                      <div className="md:col-span-5 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input
+                          placeholder="Search services, doctors, businesses..."
+                          className="pl-10 h-12 text-base border-slate-200"
+                          value={q}
+                          onChange={e => setQ(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && doSearch()}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Select value={state || 'all'} onValueChange={(val) => {
+                          const nextState = val === 'all' ? '' : val;
+                          setState(nextState);
+                          setCity('');
+                          fetch(`/api/locations${nextState ? `?state=${encodeURIComponent(nextState)}` : ''}`)
+                            .then(r => r.json())
+                            .then(d => setLocations(prev => ({ ...prev, cities: d.cities || [] })));
+                        }}>
+                          <SelectTrigger className="h-12"><MapPin className="w-4 h-4 mr-2 text-slate-400" /><SelectValue placeholder="All States" /></SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="all">🇮🇳 All States (Pan-India)</SelectItem>
+                            {locations.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Select value={city || 'all'} onValueChange={(val) => setCity(val === 'all' ? '' : val)}>
+                          <SelectTrigger className="h-12"><SelectValue placeholder="All Cities" /></SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            <SelectItem value="all">All Cities</SelectItem>
+                            {locations.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <Button className="w-full h-12 bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white text-base font-semibold" onClick={doSearch}>
+                          <Search className="w-4 h-4 mr-2" />Search
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
+                      <span className="font-medium text-slate-700">Popular:</span>
+                      {['Electrician','Doctor','AC Repair','Beauty Parlour','Plumber','Photographer'].map(t => (
+                        <button key={t} onClick={() => { setQ(t); setTimeout(doSearch, 50); }} className="underline underline-offset-2 hover:text-blue-600">{t}</button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                  {[{icon: Users, label: 'Happy Customers', val: `${(stats.customers/1000).toFixed(0)}K+`},
+                    {icon: Building2, label: 'Verified Providers', val: `${stats.providers}+`},
+                    {icon: Stethoscope, label: 'Doctors Listed', val: `${stats.doctors}+`},
+                    {icon: TrendingUp, label: 'Service Categories', val: `${stats.categories}+`}].map((s, i) => (
+                    <div key={i} className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/15 transition shadow-sm">
+                      <s.icon className="w-5 h-5 mb-1.5 text-orange-300" />
+                      <div className="text-xl md:text-2xl font-bold">{s.val}</div>
+                      <div className="text-xs text-blue-100">{s.label}</div>
+                    </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-              {[{icon: Users, label: 'Happy Customers', val: `${(stats.customers/1000).toFixed(0)}K+`},
-                {icon: Building2, label: 'Verified Providers', val: `${stats.providers}+`},
-                {icon: Stethoscope, label: 'Doctors Listed', val: `${stats.doctors}+`},
-                {icon: TrendingUp, label: 'Service Categories', val: `${stats.categories}+`}].map((s, i) => (
-                <div key={i} className="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
-                  <s.icon className="w-6 h-6 mb-2 text-orange-300" />
-                  <div className="text-2xl font-bold">{s.val}</div>
-                  <div className="text-xs text-blue-100">{s.label}</div>
-                </div>
-              ))}
+                {/* Slider Pagination Indicators / Dots */}
+                {heroSlides.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    {heroSlides.map((_, dotIdx) => (
+                      <button
+                        key={dotIdx}
+                        type="button"
+                        onClick={() => setCurrentSlide(dotIdx)}
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          dotIdx === currentSlide
+                            ? 'w-8 bg-gradient-to-r from-orange-400 to-yellow-300 shadow-sm'
+                            : 'w-2 bg-white/40 hover:bg-white/70'
+                        }`}
+                        aria-label={`Go to slide ${dotIdx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        );
+      })()}
 
       {/* POPULAR CATEGORIES */}
       <section className="py-16 bg-slate-50">
@@ -241,6 +359,13 @@ export default function App() {
               </Card>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* SPONSORED PROMOTIONAL BANNER AD */}
+      <section className="py-6 bg-slate-50/50">
+        <div className="container mx-auto px-4">
+          <AdBanner placement="homepage_banner" />
         </div>
       </section>
 
@@ -440,47 +565,10 @@ export default function App() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-300 pt-16 pb-8">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-orange-500 grid place-items-center text-white font-bold">S2</div>
-                <div className="font-bold text-white text-lg">Search2Service</div>
-              </div>
-              <p className="text-sm text-slate-400">One platform for every service. Trusted by thousands of businesses and customers across India.</p>
-            </div>
-            <div>
-              <div className="font-semibold text-white mb-3">Popular</div>
-              <ul className="space-y-2 text-sm">
-                {['Doctor','Electrician','Hotel','Restaurant','Beauty Parlour','AC Repair'].map(l => (
-                  <li key={l}><Link href={`/search?q=${encodeURIComponent(l)}`} className="hover:text-white">{l}</Link></li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="font-semibold text-white mb-3">Company</div>
-              <ul className="space-y-2 text-sm">
-                {['About Us','Careers','Blog','Press','Contact'].map(l => (
-                  <li key={l}><span className="hover:text-white cursor-pointer">{l}</span></li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="font-semibold text-white mb-3">Legal</div>
-              <ul className="space-y-2 text-sm">
-                {['Privacy Policy','Terms & Conditions','Refund Policy','Disclaimer','Support'].map(l => (
-                  <li key={l}><span className="hover:text-white cursor-pointer">{l}</span></li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 mt-10 pt-6 text-sm text-slate-500 flex flex-col md:flex-row justify-between gap-2">
-            <div>© {new Date().getFullYear()} Search2Service. All rights reserved.</div>
-            <div>Made with ❤️ in India</div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
+
+      {/* Promotional Popup Modal / Toast */}
+      <AdBanner placement="popup_modal" />
 
       {/* Floating AI Concierge */}
       <ConciergeChat />
