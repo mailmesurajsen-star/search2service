@@ -897,12 +897,14 @@ class AdminSettingsPayload(BaseModel):
     emergencyNotice: Optional[str] = ""
     noticeActive: Optional[bool] = False
     maintenanceMode: Optional[bool] = False
+    playStoreUrl: Optional[str] = ""
+    appStoreUrl: Optional[str] = ""
 
 @router.get("/settings")
 async def get_admin_settings(request: Request):
     await require_admin(request)
     db = get_db()
-    
+
     settings = await db.system_settings.find_one({"key": "platform_config"})
     if not settings:
         settings = {
@@ -912,7 +914,9 @@ async def get_admin_settings(request: Request):
             "supportEmail": "support@search2service.in",
             "emergencyNotice": "24x7 Emergency Services are active across major cities.",
             "noticeActive": True,
-            "maintenanceMode": False
+            "maintenanceMode": False,
+            "playStoreUrl": "",
+            "appStoreUrl": ""
         }
     return {"settings": clean_doc(settings)}
 

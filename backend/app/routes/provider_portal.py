@@ -8,8 +8,7 @@ import random
 from typing import Optional, List, Any
 from fastapi import APIRouter, Request, HTTPException, status
 from pydantic import BaseModel
-from bson import ObjectId
-from app.db import get_db, get_files_bucket, clean_doc
+from app.db import get_db, delete_upload, clean_doc
 from app.auth import get_current_user
 from app.config import EMERGENT_LLM_KEY, GEMINI_MODEL
 
@@ -281,8 +280,8 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
         (f"https://maps.google.com/maps?q={urllib.parse.quote(address)}&output=embed" if address else "")
     )
     
-    lat = loc_input.get("lat") if loc_input.get("lat") is not None else existing_loc.get("lat")
-    lng = loc_input.get("lng") if loc_input.get("lng") is not None else existing_loc.get("lng")
+    lat = loc_input.get("lat") if loc_input.get("lat") not in (None, '') else existing_loc.get("lat")
+    lng = loc_input.get("lng") if loc_input.get("lng") not in (None, '') else existing_loc.get("lng")
     
     # Timings handling
     t_input = b_dict.get("timings", {})
@@ -301,6 +300,14 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
             return default
         try:
             return int(val)
+        except (ValueError, TypeError):
+            return default
+
+    def parse_float(val, default=None):
+        if val is None or val == '':
+            return default
+        try:
+            return float(val)
         except (ValueError, TypeError):
             return default
 
@@ -338,8 +345,8 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
         "images": b_dict.get("images", existing.get("images", []) if existing else []),
         "timings": timings,
         "location": {
-            "lat": float(lat) if lat is not None else None,
-            "lng": float(lng) if lng is not None else None,
+            "lat": parse_float(lat),
+            "lng": parse_float(lng),
             "embedUrl": embed_url
         },
         "rating": existing.get("rating", 0) if existing else 0,
@@ -396,10 +403,9 @@ async def delete_provider_media(media_id: str, request: Request):
         raise HTTPException(status_code=403, detail="forbidden")
         
     file_id = media.get("fileId")
-    if file_id and ObjectId.is_valid(file_id):
+    if file_id:
         try:
-            bucket = get_files_bucket()
-            await bucket.delete(ObjectId(file_id))
+            await delete_upload(file_id)
         except Exception:
             pass
             

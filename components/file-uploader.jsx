@@ -2,14 +2,15 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { UploadCloud, X, CheckCircle2, FileText, Film, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { UploadCloud, X, CheckCircle2, FileText, Film, Image as ImageIcon, Loader2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4,video/webm,video/quicktime';
 const MAX_BYTES = 10 * 1024 * 1024;
 
-export function FileUploader({ context = 'general', providerId = null, ownerId = 'anonymous', onUploaded, multiple = false, accept = ACCEPT, buttonLabel = 'Upload file' }) {
+export function FileUploader({ context = 'general', providerId = null, ownerId = 'anonymous', onUploaded, multiple = false, accept = ACCEPT, buttonLabel = 'Upload file', allowCamera = false }) {
   const inputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [previews, setPreviews] = useState([]); // {url, name, mimeType}
@@ -52,6 +53,7 @@ export function FileUploader({ context = 'general', providerId = null, ownerId =
     setUploading(false);
     setProgress(0);
     if (inputRef.current) inputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
     if (onUploaded) onUploaded(multiple ? uploaded : uploaded[0]);
   };
 
@@ -83,6 +85,26 @@ export function FileUploader({ context = 'general', providerId = null, ownerId =
           </div>
         )}
       </div>
+      {allowCamera && !uploading && (
+        <>
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => cameraInputRef.current?.click()}
+            className="w-full gap-2"
+          >
+            <Camera className="w-4 h-4" /> Take Photo with Camera
+          </Button>
+        </>
+      )}
       {previews.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {previews.map(p => (

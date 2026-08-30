@@ -3,9 +3,7 @@ import re
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query, Response
-from fastapi.responses import StreamingResponse
-from bson import ObjectId
-from app.db import get_db, get_files_bucket, clean_doc
+from app.db import get_db, save_upload, get_upload, clean_doc
 
 router = APIRouter(prefix="/api", tags=["uploads"])
 
@@ -44,10 +42,10 @@ async def upload_file(
     ext = ALLOWED_MIME[content_type]
     safe_name = f"{uuid.uuid4()}{ext}"
     orig_name = (file.filename or "file")[:200]
-    
-    bucket = get_files_bucket()
-    grid_in = bucket.open_upload_stream(
-        safe_name,
+
+    file_id = str(uuid.uuid4())
+    await save_upload(
+        file_id, safe_name, content_type, contents,
         metadata={
             "originalName": orig_name,
             "declaredMimeType": content_type,
@@ -55,13 +53,10 @@ async def upload_file(
             "ownerId": ownerId or "anonymous",
             "context": context or "general",
             "providerId": providerId if providerId else None,
-        }
+        },
+        created_at=datetime.utcnow().isoformat()
     )
-    await grid_in.write(contents)
-    await grid_in.close()
-    
-    file_id = str(grid_in._id)
-    
+
     media = {
         "id": str(uuid.uuid4()),
         "fileId": file_id,
@@ -84,38 +79,22 @@ async def upload_file(
 
 @router.get("/files/{file_id}")
 async def get_file(file_id: str):
-    if not ObjectId.is_valid(file_id):
-        raise HTTPException(status_code=400, detail="Invalid file id")
-        
-    obj_id = ObjectId(file_id)
-    db = get_db()
-    meta = await db["uploads.files"].find_one({"_id": obj_id})
-    if not meta:
+    stored = await get_upload(file_id)
+    if not stored:
         raise HTTPException(status_code=404, detail="Not found")
-        
-    bucket = get_files_bucket()
-    grid_out = await bucket.open_download_stream(obj_id)
-    
-    meta_dict = meta.get("metadata", {}) or {}
-    orig_name = meta_dict.get("originalName") or meta.get("filename", "file")
+
+    meta_dict = stored.get("metadata", {}) or {}
+    orig_name = meta_dict.get("originalName") or stored.get("filename", "file")
     safe_filename = re.sub(r'["\\\r\n]', '_', str(orig_name))
-    mime_type = meta_dict.get("declaredMimeType") or meta.get("contentType", "application/octet-stream")
-    
-    async def file_chunks():
-        while True:
-            chunk = await grid_out.readchunk()
-            if not chunk:
-                break
-            yield chunk
+    mime_type = meta_dict.get("declaredMimeType") or stored.get("contentType", "application/octet-stream")
 
     headers = {
-        "Content-Length": str(meta.get("length", 0)),
         "Content-Disposition": f'inline; filename="{safe_filename}"',
         "Cache-Control": "public, max-age=31536000, immutable",
         "X-Content-Type-Options": "nosniff"
     }
-    
-    return StreamingResponse(file_chunks(), media_type=mime_type, headers=headers)
+
+    return Response(content=stored["fileData"], media_type=mime_type, headers=headers)
 
 @router.get("/media")
 async def get_media_list(

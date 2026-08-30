@@ -1,9 +1,9 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/lib/use-auth';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' });
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], display: 'swap', variable: '--font-jakarta' });
 
 export const metadata = {
   title: 'Search2Service — One Platform for Every Service',
@@ -20,7 +20,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className={`${jakarta.variable} ${jakarta.className} bg-background text-foreground antialiased`}>
         <AuthProvider>
           {children}
         </AuthProvider>

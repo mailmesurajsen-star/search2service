@@ -55,7 +55,7 @@ export default function PrivacyPolicyPage() {
         <p>
           You can update your profile information, remove uploaded photos or your resume, or request deletion of
           your account at any time by contacting us at{' '}
-          <a href="mailto:privacy@search2service.in" className="text-indigo-600 font-semibold hover:underline">privacy@search2service.in</a>.
+          <a href="mailto:search2service@gmail.com" className="text-primary font-semibold hover:underline">search2service@gmail.com</a>.
         </p>
       </LegalSection>
 
@@ -69,8 +69,8 @@ export default function PrivacyPolicyPage() {
       <LegalSection title="8. Contact Us">
         <p>
           For any privacy-related questions, please reach out via our{' '}
-          <a href="/contact" className="text-indigo-600 font-semibold hover:underline">Contact page</a> or email{' '}
-          <a href="mailto:privacy@search2service.in" className="text-indigo-600 font-semibold hover:underline">privacy@search2service.in</a>.
+          <a href="/contact" className="text-primary font-semibold hover:underline">Contact page</a> or email{' '}
+          <a href="mailto:search2service@gmail.com" className="text-primary font-semibold hover:underline">search2service@gmail.com</a>.
         </p>
       </LegalSection>
     </LegalPage>

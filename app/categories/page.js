@@ -35,12 +35,12 @@ export default function CategoriesPage() {
   const filter = (list) => q ? list.filter(c => c.name.toLowerCase().includes(q.toLowerCase())) : list;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Home</Link>
           <div className="flex-1 max-w-md ml-auto relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Filter categories..." className="pl-9 h-10" />
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function CategoriesPage() {
 
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-2">Browse All Categories</h1>
-        <p className="text-slate-500 mb-8">Find any service across {Object.values(groups).reduce((a, b) => a + b.length, 0)}+ categories</p>
+        <p className="text-muted-foreground mb-8">Find any service across {Object.values(groups).reduce((a, b) => a + b.length, 0)}+ categories</p>
 
         <div className="space-y-8">
           {Object.entries(groups).map(([group, items]) => {
@@ -61,12 +61,12 @@ export default function CategoriesPage() {
                     <Icon name={items[0]?.groupIcon || items[0]?.icon} className="w-5 h-5" />
                   </div>
                   <h2 className="text-xl font-bold">{group}</h2>
-                  <span className="text-sm text-slate-500">({filtered.length})</span>
+                  <span className="text-sm text-muted-foreground">({filtered.length})</span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   {filtered.map(c => (
                     <Link key={c.id} href={`/search?category=${c.slug}`}>
-                      <Card className="hover:shadow-md hover:border-blue-400 transition-all">
+                      <Card className="hover:shadow-md hover:border-accent/50 transition-all">
                         <CardContent className="p-3 flex items-center gap-2">
                           <div className={`w-9 h-9 rounded-md bg-gradient-to-br ${c.color} grid place-items-center text-white flex-shrink-0`}>
                             <Icon name={c.icon} className="w-4 h-4" />

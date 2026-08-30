@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import { FileUploader } from '@/components/file-uploader';
-import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2, Check } from 'lucide-react';
 
 const PAYMENT_METHODS = ['UPI', 'Cash', 'Card', 'Net Banking', 'Razorpay', 'PayTM', 'PhonePe', 'Google Pay'];
 
@@ -132,24 +132,24 @@ export default function BusinessProfilePage() {
   const selectedCat = cats.find(c => c.slug === b.categorySlug);
   const isDoctor = selectedCat && ['Doctor', 'Dentist', 'Eye Specialist', 'Skin Specialist', 'ENT', 'Orthopedic', 'Cardiologist', 'Neurologist', 'Child Specialist', 'Gynecologist', 'Physiotherapist'].includes(selectedCat.name);
 
-  if (loading || !user) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/provider/dashboard" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Dashboard</Link>
           <div className="flex-1" />
-          <Button onClick={save} disabled={saving} className="bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white"><Save className="w-4 h-4 mr-1" />{saving ? 'Saving...' : 'Save & Go Live'}</Button>
+          <Button onClick={save} disabled={saving} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Save className="w-4 h-4 mr-1" />{saving ? 'Saving...' : 'Save & Go Live'}</Button>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-6 max-w-4xl space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 grid place-items-center text-white"><Store className="w-6 h-6" /></div>
+          <div className="w-11 h-11 rounded-xl bg-primary grid place-items-center text-white"><Store className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-bold">Business Profile</h1>
-            <p className="text-slate-500 text-sm">Set up your business so customers can find and book you</p>
+            <p className="text-muted-foreground text-sm">Set up your business so customers can find and book you</p>
           </div>
         </div>
 
@@ -170,7 +170,7 @@ export default function BusinessProfilePage() {
           <div>
             <div className="flex items-center justify-between">
               <Label>Description</Label>
-              <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={generatingDesc} className="h-7 text-xs gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50">
+              <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={generatingDesc} className="h-7 text-xs gap-1.5 text-accent border-accent/30 hover:bg-accent/10">
                 {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                 {generatingDesc ? 'Generating…' : 'Generate with AI'}
               </Button>
@@ -195,14 +195,14 @@ export default function BusinessProfilePage() {
           <div>
             <Label>Shop Banner (1200x400 recommended)</Label>
             <div className="mt-2">
-              <FileUploader context="provider-banner" ownerId={user.id} accept="image/jpeg,image/png,image/webp" buttonLabel="Upload shop banner" onUploaded={(f) => setB(x => ({ ...x, banner: f.url }))} />
+              <FileUploader context="provider-banner" ownerId={user.id} accept="image/jpeg,image/png,image/webp" buttonLabel="Upload shop banner" allowCamera onUploaded={(f) => setB(x => ({ ...x, banner: f.url }))} />
               {b.banner && <div className="mt-3 relative w-full h-40 bg-cover bg-center rounded-lg" style={{ backgroundImage: `url(${b.banner})` }}><button onClick={() => setB(x => ({ ...x, banner: '' }))} className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-red-600 text-white rounded-full grid place-items-center"><X className="w-4 h-4" /></button></div>}
             </div>
           </div>
           <div>
             <Label>Gallery Photos</Label>
             <div className="mt-2">
-              <FileUploader context="provider-gallery" ownerId={user.id} multiple accept="image/jpeg,image/png,image/webp" buttonLabel="Add gallery photos" onUploaded={(files) => setB(x => ({ ...x, images: [...(x.images || []), ...(Array.isArray(files) ? files : [files]).map(f => f.url)] }))} />
+              <FileUploader context="provider-gallery" ownerId={user.id} multiple accept="image/jpeg,image/png,image/webp" buttonLabel="Add gallery photos" allowCamera onUploaded={(files) => setB(x => ({ ...x, images: [...(x.images || []), ...(Array.isArray(files) ? files : [files]).map(f => f.url)] }))} />
               {b.images?.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
                   {b.images.map((url, i) => (
@@ -288,7 +288,7 @@ export default function BusinessProfilePage() {
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
               {b.services.map((s, i) => (
-                <Badge key={i} className="bg-blue-100 text-blue-800 hover:bg-blue-100 pr-1">{s}<button onClick={() => setB(x => ({ ...x, services: x.services.filter((_, j) => j !== i) }))} className="ml-1"><X className="w-3 h-3" /></button></Badge>
+                <Badge key={i} className="bg-accent/10 text-accent hover:bg-accent/10 pr-1 gap-1"><Check className="w-3 h-3" />{s}<button onClick={() => setB(x => ({ ...x, services: x.services.filter((_, j) => j !== i) }))} className="ml-1"><X className="w-3 h-3" /></button></Badge>
               ))}
             </div>
           </div>
@@ -305,7 +305,7 @@ export default function BusinessProfilePage() {
             </div>
             <div className="flex flex-col gap-1 mt-2">
               {b.offers.map((o, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-800 text-sm">
+                <div key={i} className="flex items-center justify-between px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm">
                   <span>🎉 {o}</span>
                   <button onClick={() => setB(x => ({ ...x, offers: x.offers.filter((_, j) => j !== i) }))}><X className="w-4 h-4" /></button>
                 </div>
@@ -328,12 +328,14 @@ export default function BusinessProfilePage() {
         {/* PAYMENT */}
         <Card><CardContent className="p-5 space-y-3">
           <h3 className="font-bold flex items-center gap-2"><CreditCard className="w-4 h-4" />Payment Setup (Your own gateway)</h3>
-          <p className="text-xs text-slate-500">Customers will pay you directly using these methods — Search2Service takes no cut.</p>
+          <p className="text-xs text-muted-foreground">Customers will pay you directly using these methods — Search2Service takes no cut.</p>
           <div>
             <Label>Accepted Payment Methods</Label>
             <div className="flex flex-wrap gap-2 mt-2">
               {PAYMENT_METHODS.map(m => (
-                <button key={m} onClick={() => togglePM(m)} className={`px-3 py-1.5 rounded-full border text-sm ${b.paymentMethods.includes(m) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>{m}</button>
+                <button key={m} onClick={() => togglePM(m)} className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${b.paymentMethods.includes(m) ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-border hover:border-accent/40'}`}>
+                  {b.paymentMethods.includes(m) && <Check className="w-3.5 h-3.5" />}{m}
+                </button>
               ))}
             </div>
           </div>
@@ -341,14 +343,14 @@ export default function BusinessProfilePage() {
             <div><Label>UPI ID</Label><Input className="mt-1" value={b.upi} onChange={e => setB({ ...b, upi: e.target.value })} placeholder="yourname@paytm" /></div>
             <div><Label>Razorpay Key ID (optional)</Label><Input className="mt-1" value={b.razorpayKeyId} onChange={e => setB({ ...b, razorpayKeyId: e.target.value })} placeholder="rzp_live_xxxxxxxxxx" /></div>
           </div>
-          <div className="text-xs text-slate-500 flex gap-2 items-start"><Wallet className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Your UPI ID is shown on your profile so customers can pay directly. Razorpay Key ID is optional — add it if you want a “Pay Online” button on your booking flow.</span></div>
+          <div className="text-xs text-muted-foreground flex gap-2 items-start"><Wallet className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Your UPI ID is shown on your profile so customers can pay directly. Razorpay Key ID is optional — add it if you want a “Pay Online” button on your booking flow.</span></div>
         </CardContent></Card>
 
         {/* JOB PUBLISH */}
         <Card><CardContent className="p-5 space-y-4">
           <div>
             <h3 className="font-bold flex items-center gap-2"><Briefcase className="w-4 h-4" />Publish a Job Opening</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Hiring? Post a job opening — it appears on the Search2Service Jobs page under your business name.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Hiring? Post a job opening — it appears on the Search2Service Jobs page under your business name.</p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -370,7 +372,7 @@ export default function BusinessProfilePage() {
             <div className="sm:col-span-2"><Label>Job Description</Label><Textarea className="mt-1" rows={3} value={newJob.description} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Responsibilities, requirements, perks…" /></div>
           </div>
           <div className="flex justify-end">
-            <Button onClick={publishJob} disabled={postingJob} className="bg-blue-600 hover:bg-blue-500 text-white">
+            <Button onClick={publishJob} disabled={postingJob} className="bg-accent hover:bg-accent/90 text-accent-foreground">
               {postingJob ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Briefcase className="w-4 h-4 mr-2" />}
               {postingJob ? 'Publishing…' : 'Publish Job'}
             </Button>
@@ -380,21 +382,21 @@ export default function BusinessProfilePage() {
             <div className="pt-3 border-t space-y-2">
               <Label>Your Published Jobs ({jobs.length})</Label>
               {jobs.map(j => (
-                <div key={j.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                <div key={j.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border">
                   <div>
                     <div className="text-sm font-semibold">{j.title}</div>
-                    <div className="text-xs text-slate-500">{j.type} • {j.experience} • {j.salary}</div>
+                    <div className="text-xs text-muted-foreground">{j.type} • {j.experience} • {j.salary}</div>
                   </div>
-                  <button onClick={() => deleteJob(j.id)} className="text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => deleteJob(j.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
           )}
-          {loadingJobs && jobs.length === 0 && <div className="text-xs text-slate-400">Loading your jobs…</div>}
+          {loadingJobs && jobs.length === 0 && <div className="text-xs text-muted-foreground">Loading your jobs…</div>}
         </CardContent></Card>
 
         <div className="flex justify-end pt-2">
-          <Button onClick={save} disabled={saving} size="lg" className="bg-gradient-to-r from-orange-500 to-red-600 hover:opacity-90 text-white"><Save className="w-4 h-4 mr-2" />{saving ? 'Saving...' : 'Save & Go Live'}</Button>
+          <Button onClick={save} disabled={saving} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground"><Save className="w-4 h-4 mr-2" />{saving ? 'Saving...' : 'Save & Go Live'}</Button>
         </div>
       </div>
     </div>

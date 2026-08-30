@@ -3,19 +3,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ConciergeChat } from '@/components/concierge-chat';
 import { AdBanner } from '@/components/ad-banner';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { HeroSlider } from '@/components/hero-slider';
 import {
-  Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
-  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, ChevronLeft, Download, Smartphone,
-  Verified, TrendingUp, Clock, HeartHandshake, Award, Users, Building2, IndianRupee,
+  MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
+  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
+  Verified, Clock, HeartHandshake, Award, Building2, IndianRupee,
   Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
   Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
   Monitor, Laptop, Cctv, Video, PartyPopper, Building, BedDouble, UtensilsCrossed, Coffee, Croissant, CakeSlice,
@@ -55,15 +54,14 @@ export default function App() {
   const [jobs, setJobs] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [stats, setStats] = useState({ providers: 0, doctors: 0, categories: 0, customers: 0 });
+  const [appLinks, setAppLinks] = useState({ playStoreUrl: '', appStoreUrl: '' });
 
-  // Hero Slider State
+  // Hero Slider State (slide index/autoplay is now owned by <HeroSlider>)
   const [heroSlides, setHeroSlides] = useState([]);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isSliderPaused, setIsSliderPaused] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [locs, pop, grp, feat, docs, hot, rest, govs, jobsR, tests, st, slidesRes] = await Promise.all([
+      const [locs, pop, grp, feat, docs, hot, rest, govs, jobsR, tests, st, slidesRes, settingsRes] = await Promise.all([
         fetch('/api/locations').then(r => r.json()).catch(() => ({})),
         fetch('/api/categories?popular=true').then(r => r.json()).catch(() => ({})),
         fetch('/api/categories?grouped=true').then(r => r.json()).catch(() => ({})),
@@ -76,6 +74,7 @@ export default function App() {
         fetch('/api/reviews/recent').then(r => r.json()).catch(() => ({})),
         fetch('/api/stats').then(r => r.json()).catch(() => ({})),
         fetch('/api/hero-slides').then(r => r.json()).catch(() => ({ slides: [] })),
+        fetch('/api/settings').then(r => r.json()).catch(() => ({})),
       ]);
       setLocations({ states: locs?.states || [], cities: locs?.cities || [] });
       setPopularCats(pop?.categories || []);
@@ -91,17 +90,9 @@ export default function App() {
       if (slidesRes?.slides && slidesRes.slides.length > 0) {
         setHeroSlides(slidesRes.slides);
       }
+      setAppLinks({ playStoreUrl: settingsRes?.playStoreUrl || '', appStoreUrl: settingsRes?.appStoreUrl || '' });
     })();
   }, []);
-
-  // Slider Auto-Advance Effect (Every 6 seconds)
-  useEffect(() => {
-    if (!heroSlides || heroSlides.length <= 1 || isSliderPaused) return;
-    const timer = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % heroSlides.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [heroSlides, isSliderPaused]);
 
   const doSearch = () => {
     const params = new URLSearchParams();
@@ -117,217 +108,28 @@ export default function App() {
       <SiteHeader />
 
       {/* HERO SLIDER SECTION */}
-      {(() => {
-        const activeSlide = (heroSlides && heroSlides.length > 0 && heroSlides[currentSlide]) ? heroSlides[currentSlide] : {
-          badge: '🇮🇳 India’s Complete Services Marketplace',
-          title: 'Find trusted services',
-          highlightText: 'near you — in seconds.',
-          subtitle: 'Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.',
-          imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
-          overlayGradient: 'from-blue-950/90 via-blue-900/85 to-orange-800/80',
-          ctaText: 'Explore Categories',
-          ctaLink: '/categories',
-        };
-
-        return (
-          <section
-            className="relative overflow-hidden group min-h-[580px] md:min-h-[640px] flex items-center"
-            onMouseEnter={() => setIsSliderPaused(true)}
-            onMouseLeave={() => setIsSliderPaused(false)}
-          >
-            {/* Background Slides with Cross-Fade */}
-            {heroSlides.length > 0 ? (
-              heroSlides.map((slide, idx) => (
-                <div
-                  key={slide.id || idx}
-                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                    idx === currentSlide ? 'opacity-100 z-0' : 'opacity-0 -z-10 pointer-events-none'
-                  }`}
-                >
-                  <div
-                    className={`absolute inset-0 bg-cover bg-center transition-transform duration-7000 ease-out ${
-                      idx === currentSlide ? 'scale-100' : 'scale-105'
-                    }`}
-                    style={{ backgroundImage: `url(${slide.imageUrl})` }}
-                  />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${slide.overlayGradient || 'from-blue-950/90 via-blue-900/85 to-orange-800/80'}`} />
-                </div>
-              ))
-            ) : (
-              <div className="absolute inset-0 z-0">
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url(${activeSlide.imageUrl})` }}
-                />
-                <div className={`absolute inset-0 bg-gradient-to-br ${activeSlide.overlayGradient}`} />
-              </div>
-            )}
-
-            {/* Previous / Next Arrow Controls */}
-            {heroSlides.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setCurrentSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length)}
-                  className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 grid place-items-center transition-all opacity-80 hover:opacity-100 hover:scale-110 shadow-lg"
-                  aria-label="Previous Slide"
-                >
-                  <ChevronLeft className="w-6 h-6" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentSlide((currentSlide + 1) % heroSlides.length)}
-                  className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 hover:bg-black/60 text-white/90 hover:text-white backdrop-blur-md border border-white/20 grid place-items-center transition-all opacity-80 hover:opacity-100 hover:scale-110 shadow-lg"
-                  aria-label="Next Slide"
-                >
-                  <ChevronRight className="w-6 h-6" />
-                </button>
-              </>
-            )}
-
-            <div className="relative z-10 container mx-auto px-4 py-12 md:py-20">
-              <div className="max-w-4xl text-white">
-                {/* Dynamic Badge */}
-                {activeSlide.badge && (
-                  <div className="inline-flex items-center gap-1.5 bg-white/15 text-white border border-white/30 backdrop-blur-md px-3.5 py-1 rounded-full text-xs font-semibold mb-4 shadow-sm animate-fadeIn">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                    {activeSlide.badge}
-                  </div>
-                )}
-
-                {/* Dynamic Title & Highlight */}
-                <h1 className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight mb-4 drop-shadow-sm transition-all">
-                  {activeSlide.title}{' '}
-                  {activeSlide.highlightText && (
-                    <>
-                      <br className="hidden sm:inline" />
-                      <span className="bg-gradient-to-r from-orange-300 via-amber-200 to-yellow-200 bg-clip-text text-transparent">
-                        {activeSlide.highlightText}
-                      </span>
-                    </>
-                  )}
-                </h1>
-
-                {/* Subtitle & Optional CTA Button */}
-                <div className="flex flex-wrap items-center gap-4 mb-8">
-                  {activeSlide.subtitle && (
-                    <p className="text-base sm:text-lg text-blue-50/95 max-w-2xl leading-relaxed">
-                      {activeSlide.subtitle}
-                    </p>
-                  )}
-                  {activeSlide.ctaText && (
-                    <Link href={activeSlide.ctaLink || '/categories'}>
-                      <Button size="sm" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs px-4 h-9 shadow-md shadow-orange-500/20 gap-1.5">
-                        {activeSlide.ctaText} <ChevronRight className="w-3.5 h-3.5" />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-
-                {/* Search Box Card */}
-                <Card className="bg-white/95 backdrop-blur-md shadow-2xl border-0">
-                  <CardContent className="p-4 md:p-5">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                      <div className="md:col-span-5 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <Input
-                          placeholder="Search services, doctors, businesses..."
-                          className="pl-10 h-12 text-base border-slate-200"
-                          value={q}
-                          onChange={e => setQ(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && doSearch()}
-                        />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Select value={state || 'all'} onValueChange={(val) => {
-                          const nextState = val === 'all' ? '' : val;
-                          setState(nextState);
-                          setCity('');
-                          fetch(`/api/locations${nextState ? `?state=${encodeURIComponent(nextState)}` : ''}`)
-                            .then(r => r.json())
-                            .then(d => setLocations(prev => ({ ...prev, cities: d.cities || [] })));
-                        }}>
-                          <SelectTrigger className="h-12"><MapPin className="w-4 h-4 mr-2 text-slate-400" /><SelectValue placeholder="All States" /></SelectTrigger>
-                          <SelectContent className="max-h-72">
-                            <SelectItem value="all">🇮🇳 All States (Pan-India)</SelectItem>
-                            {locations.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Select value={city || 'all'} onValueChange={(val) => setCity(val === 'all' ? '' : val)}>
-                          <SelectTrigger className="h-12"><SelectValue placeholder="All Cities" /></SelectTrigger>
-                          <SelectContent className="max-h-72">
-                            <SelectItem value="all">All Cities</SelectItem>
-                            {locations.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="md:col-span-2">
-                        <Button className="w-full h-12 bg-gradient-to-r from-blue-600 to-orange-500 hover:opacity-90 text-white text-base font-semibold" onClick={doSearch}>
-                          <Search className="w-4 h-4 mr-2" />Search
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-                      <span className="font-medium text-slate-700">Popular:</span>
-                      {['Electrician','Doctor','AC Repair','Beauty Parlour','Plumber','Photographer'].map(t => (
-                        <button key={t} onClick={() => { setQ(t); setTimeout(doSearch, 50); }} className="underline underline-offset-2 hover:text-blue-600">{t}</button>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-                  {[{icon: Users, label: 'Happy Customers', val: `${(stats.customers/1000).toFixed(0)}K+`},
-                    {icon: Building2, label: 'Verified Providers', val: `${stats.providers}+`},
-                    {icon: Stethoscope, label: 'Doctors Listed', val: `${stats.doctors}+`},
-                    {icon: TrendingUp, label: 'Service Categories', val: `${stats.categories}+`}].map((s, i) => (
-                    <div key={i} className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 hover:bg-white/15 transition shadow-sm">
-                      <s.icon className="w-5 h-5 mb-1.5 text-orange-300" />
-                      <div className="text-xl md:text-2xl font-bold">{s.val}</div>
-                      <div className="text-xs text-blue-100">{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Slider Pagination Indicators / Dots */}
-                {heroSlides.length > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
-                    {heroSlides.map((_, dotIdx) => (
-                      <button
-                        key={dotIdx}
-                        type="button"
-                        onClick={() => setCurrentSlide(dotIdx)}
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          dotIdx === currentSlide
-                            ? 'w-8 bg-gradient-to-r from-orange-400 to-yellow-300 shadow-sm'
-                            : 'w-2 bg-white/40 hover:bg-white/70'
-                        }`}
-                        aria-label={`Go to slide ${dotIdx + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      })()}
+      <HeroSlider
+        heroSlides={heroSlides}
+        q={q} setQ={setQ}
+        state={state} setState={setState}
+        city={city} setCity={setCity}
+        locations={locations} setLocations={setLocations}
+        doSearch={doSearch}
+        stats={stats}
+      />
 
       {/* POPULAR CATEGORIES */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-muted/40">
         <div className="container mx-auto px-4">
           <SectionHeader title="Popular Services" subtitle="Most searched services this week" cta={{ href: '/categories', label: 'View All' }} />
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4 mt-8">
             {popularCats.map(c => (
               <Link key={c.id} href={`/search?category=${c.slug}`} className="group">
-                <div className="bg-white rounded-2xl p-4 border border-slate-200 hover:border-blue-400 hover:shadow-lg transition-all text-center">
+                <div className="bg-white rounded-2xl p-4 border border-border hover:border-accent/50 hover:shadow-lg transition-all text-center">
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.color} grid place-items-center mx-auto mb-2 text-white group-hover:scale-110 transition-transform`}>
                     <Icon name={c.icon} className="w-6 h-6" />
                   </div>
-                  <div className="text-sm font-medium text-slate-700 group-hover:text-blue-600">{c.name}</div>
+                  <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{c.name}</div>
                 </div>
               </Link>
             ))}
@@ -351,9 +153,9 @@ export default function App() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {items.slice(0, 8).map(i => (
-                      <Link key={i.id} href={`/search?category=${i.slug}`} className="text-sm px-3 py-1 rounded-full bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-700">{i.name}</Link>
+                      <Link key={i.id} href={`/search?category=${i.slug}`} className="text-sm px-3 py-1 rounded-full bg-muted hover:bg-accent/10 hover:text-accent text-muted-foreground transition-colors">{i.name}</Link>
                     ))}
-                    {items.length > 8 && <span className="text-sm text-slate-400">+{items.length - 8} more</span>}
+                    {items.length > 8 && <span className="text-sm text-muted-foreground">+{items.length - 8} more</span>}
                   </div>
                 </CardContent>
               </Card>
@@ -363,16 +165,16 @@ export default function App() {
       </section>
 
       {/* SPONSORED PROMOTIONAL BANNER AD */}
-      <section className="py-6 bg-slate-50/50">
+      <section className="py-6 bg-muted/30">
         <div className="container mx-auto px-4">
           <AdBanner placement="homepage_banner" />
         </div>
       </section>
 
       {/* FEATURED PREMIUM PROVIDERS */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-muted/40">
         <div className="container mx-auto px-4">
-          <SectionHeader title="Premium Providers" subtitle="Top-rated verified businesses" cta={{ href: '/search?premium=true', label: 'See All' }} icon={<Award className="w-5 h-5 text-orange-500" />} />
+          <SectionHeader title="Premium Providers" subtitle="Top-rated verified businesses" cta={{ href: '/search?premium=true', label: 'See All' }} icon={<Award className="w-5 h-5 text-[#F5A623]" />} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
             {featured.map(p => <ProviderCard key={p.id} p={p} />)}
           </div>
@@ -382,24 +184,24 @@ export default function App() {
       {/* FEATURED DOCTORS */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <SectionHeader title="Featured Doctors" subtitle="Book appointments with top specialists" cta={{ href: '/search?group=Healthcare', label: 'View All Doctors' }} icon={<Stethoscope className="w-5 h-5 text-rose-500" />} />
+          <SectionHeader title="Featured Doctors" subtitle="Book appointments with top specialists" cta={{ href: '/search?group=Healthcare', label: 'View All Doctors' }} icon={<Stethoscope className="w-5 h-5 text-accent" />} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
             {doctors.map(d => (
               <Link key={d.id} href={`/providers/${d.id}`} className="group">
                 <Card className="h-full hover:shadow-xl transition-shadow overflow-hidden">
-                  <div className="aspect-square bg-gradient-to-br from-rose-100 to-pink-200 relative">
+                  <div className="aspect-square bg-muted relative">
                     <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${d.images?.[0]})` }} />
-                    {d.premium && <Badge className="absolute top-3 left-3 bg-orange-500 hover:bg-orange-500">PREMIUM</Badge>}
+                    {d.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
                   </div>
                   <CardContent className="p-4">
-                    <div className="font-bold group-hover:text-blue-600">{d.name}</div>
-                    <div className="text-sm text-rose-600 font-medium">{d.specialization}</div>
-                    <div className="text-xs text-slate-500 mt-1">{d.qualification} • {d.experience}+ yrs exp</div>
+                    <div className="font-bold group-hover:text-primary transition-colors">{d.name}</div>
+                    <div className="text-sm text-accent font-medium">{d.specialization}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{d.qualification} • {d.experience}+ yrs exp</div>
                     <div className="flex items-center justify-between mt-3">
-                      <div className="flex items-center gap-1 text-sm"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="font-semibold">{d.rating}</span><span className="text-slate-400">({d.reviewCount})</span></div>
+                      <div className="flex items-center gap-1 text-sm"><Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" /><span className="font-semibold">{d.rating}</span><span className="text-muted-foreground">({d.reviewCount})</span></div>
                       <div className="text-sm font-bold flex items-center"><IndianRupee className="w-3.5 h-3.5" />{d.fees}</div>
                     </div>
-                    <div className="text-xs text-slate-500 mt-2 flex items-center gap-1"><MapPin className="w-3 h-3" />{d.city}</div>
+                    <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><MapPin className="w-3 h-3" />{d.city}</div>
                   </CardContent>
                 </Card>
               </Link>
@@ -409,7 +211,7 @@ export default function App() {
       </section>
 
       {/* HOTELS + RESTAURANTS row */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-muted/40">
         <div className="container mx-auto px-4 grid lg:grid-cols-2 gap-10">
           <div>
             <SectionHeader title="Latest Hotels" subtitle="Book stays across India" cta={{ href: '/search?category=hotel', label: 'All Hotels' }} />
@@ -430,11 +232,11 @@ export default function App() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-8">
-            <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 overflow-hidden">
+            <Card className="bg-primary text-white border-0 overflow-hidden">
               <CardContent className="p-8">
                 <Landmark className="w-10 h-10 mb-3" />
                 <h3 className="text-2xl font-bold mb-2">Government Services</h3>
-                <p className="text-orange-50 mb-4">PAN, Aadhaar, Passport, Certificates & more. Get help from CSC centers near you.</p>
+                <p className="text-white/85 mb-4">PAN, Aadhaar, Passport, Certificates & more. Get help from CSC centers near you.</p>
                 <div className="flex flex-wrap gap-2">
                   {['PAN Card','Aadhaar Services','Passport','Driving License','Voter ID','Income Certificate'].map(g => (
                     <Link key={g} href={`/search?q=${encodeURIComponent(g)}`} className="text-sm px-3 py-1 rounded-full bg-white/20 hover:bg-white/30">{g}</Link>
@@ -442,11 +244,11 @@ export default function App() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-rose-600 to-red-700 text-white border-0 overflow-hidden">
+            <Card className="bg-accent text-white border-0 overflow-hidden">
               <CardContent className="p-8">
                 <HeartHandshake className="w-10 h-10 mb-3" />
                 <h3 className="text-2xl font-bold mb-2">Emergency Services</h3>
-                <p className="text-rose-50 mb-4">Ambulance, Blood Bank, Hospital — available 24/7 across cities.</p>
+                <p className="text-white/85 mb-4">Ambulance, Blood Bank, Hospital — available 24/7 across cities.</p>
                 <div className="flex flex-wrap gap-2">
                   {['Ambulance','Blood Bank','Hospital','Pathology','Medical Store'].map(g => (
                     <Link key={g} href={`/search?q=${encodeURIComponent(g)}`} className="text-sm px-3 py-1 rounded-full bg-white/20 hover:bg-white/30">{g}</Link>
@@ -459,9 +261,9 @@ export default function App() {
       </section>
 
       {/* JOBS */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-muted/40">
         <div className="container mx-auto px-4">
-          <SectionHeader title="Latest Jobs" subtitle="Find opportunities across India" cta={{ href: '/search?group=Job+%26+Career', label: 'All Jobs' }} icon={<Briefcase className="w-5 h-5 text-blue-600" />} />
+          <SectionHeader title="Latest Jobs" subtitle="Find opportunities across India" cta={{ href: '/search?group=Job+%26+Career', label: 'All Jobs' }} icon={<Briefcase className="w-5 h-5 text-accent" />} />
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
             {jobs.map(j => (
               <Card key={j.id} className="hover:shadow-lg transition-shadow">
@@ -469,17 +271,17 @@ export default function App() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <div className="font-bold text-lg">{j.title}</div>
-                      <div className="text-sm text-slate-600">{j.company}</div>
+                      <div className="text-sm text-muted-foreground">{j.company}</div>
                     </div>
                     <Badge variant="outline">{j.type}</Badge>
                   </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-slate-600 mt-3">
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-3">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{j.city}</span>
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{j.experience}</span>
-                    <span className="flex items-center gap-1 font-semibold text-emerald-700"><IndianRupee className="w-3.5 h-3.5" />{j.salary.replace('₹ ','')}</span>
+                    <span className="flex items-center gap-1 font-semibold text-accent"><IndianRupee className="w-3.5 h-3.5" />{j.salary.replace('₹ ','')}</span>
                   </div>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="text-xs text-slate-400">Posted {j.posted}</span>
+                    <span className="text-xs text-muted-foreground">Posted {j.posted}</span>
                     <Button size="sm" variant="outline">Apply Now</Button>
                   </div>
                 </CardContent>
@@ -497,13 +299,13 @@ export default function App() {
             {testimonials.slice(0, 6).map(t => (
               <Card key={t.id} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex mb-3">{[...Array(5)].map((_, i) => <Star key={i} className={`w-4 h-4 ${i < t.rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-200'}`} />)}</div>
-                  <p className="text-slate-700 mb-4">“{t.comment}”</p>
+                  <div className="flex mb-3">{[...Array(5)].map((_, i) => <Star key={i} className={`w-4 h-4 ${i < t.rating ? 'fill-[#F5A623] text-[#F5A623]' : 'text-border'}`} />)}</div>
+                  <p className="text-foreground mb-4">“{t.comment}”</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 grid place-items-center text-white font-bold">{t.userName[0]}</div>
+                    <div className="w-10 h-10 rounded-full bg-primary grid place-items-center text-primary-foreground font-bold">{t.userName[0]}</div>
                     <div>
                       <div className="font-semibold">{t.userName}</div>
-                      <div className="text-xs text-slate-500">Reviewed {t.provider?.name} • {t.provider?.city}</div>
+                      <div className="text-xs text-muted-foreground">Reviewed {t.provider?.name} • {t.provider?.city}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -514,15 +316,27 @@ export default function App() {
       </section>
 
       {/* DOWNLOAD APP */}
-      <section className="py-16 bg-gradient-to-br from-blue-900 via-blue-800 to-orange-700 text-white">
+      <section className="py-16 bg-gradient-to-br from-primary to-accent text-white">
         <div className="container mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
           <div>
             <Smartphone className="w-12 h-12 mb-3" />
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Get the Search2Service App</h2>
-            <p className="text-blue-100 mb-6">Book services, track orders, get exclusive offers and manage everything on the go.</p>
+            <p className="text-white/85 mb-6">Book services, track orders, get exclusive offers and manage everything on the go.</p>
             <div className="flex flex-wrap gap-3">
-              <Button size="lg" className="bg-black hover:bg-black/80"><Download className="w-4 h-4 mr-2" />Google Play</Button>
-              <Button size="lg" className="bg-black hover:bg-black/80"><Download className="w-4 h-4 mr-2" />App Store</Button>
+              {appLinks.playStoreUrl ? (
+                <a href={appLinks.playStoreUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" className="bg-black hover:bg-black/80"><Download className="w-4 h-4 mr-2" />Google Play</Button>
+                </a>
+              ) : (
+                <Button size="lg" disabled className="bg-black/50 cursor-not-allowed"><Download className="w-4 h-4 mr-2" />Google Play</Button>
+              )}
+              {appLinks.appStoreUrl ? (
+                <a href={appLinks.appStoreUrl} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" className="bg-black hover:bg-black/80"><Download className="w-4 h-4 mr-2" />App Store</Button>
+                </a>
+              ) : (
+                <Button size="lg" disabled className="bg-black/50 cursor-not-allowed"><Download className="w-4 h-4 mr-2" />App Store</Button>
+              )}
             </div>
             <div className="flex items-center gap-6 mt-8 text-sm">
               <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" />100% Secure</div>
@@ -533,9 +347,9 @@ export default function App() {
           <div className="relative h-64 md:h-80">
             <div className="absolute inset-0 bg-white/10 backdrop-blur rounded-3xl border border-white/20 p-6">
               <div className="h-full flex flex-col justify-center items-center text-center">
-                <Smartphone className="w-24 h-24 mb-4 text-orange-300" />
+                <Smartphone className="w-24 h-24 mb-4 text-[#5EEAD4]" />
                 <div className="text-2xl font-bold">Available on all devices</div>
-                <div className="text-blue-100 mt-2">iOS • Android • PWA • Web</div>
+                <div className="text-white/85 mt-2">iOS • Android • PWA • Web</div>
               </div>
             </div>
           </div>
@@ -557,7 +371,7 @@ export default function App() {
             ].map(([q, a], i) => (
               <AccordionItem key={i} value={`i${i}`}>
                 <AccordionTrigger className="text-left">{q}</AccordionTrigger>
-                <AccordionContent className="text-slate-600">{a}</AccordionContent>
+                <AccordionContent className="text-muted-foreground">{a}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
@@ -584,9 +398,9 @@ function SectionHeader({ title, subtitle, cta, icon }) {
           {icon}
           <h2 className="text-2xl md:text-3xl font-bold">{title}</h2>
         </div>
-        {subtitle && <p className="text-slate-500 mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
       </div>
-      {cta && <Link href={cta.href} className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-1">{cta.label} <ChevronRight className="w-4 h-4" /></Link>}
+      {cta && <Link href={cta.href} className="text-primary hover:text-primary/80 font-medium text-sm flex items-center gap-1 transition-colors">{cta.label} <ChevronRight className="w-4 h-4" /></Link>}
     </div>
   );
 }
@@ -598,20 +412,20 @@ function ProviderCard({ p }) {
     <div onClick={go} className="cursor-pointer h-full">
     <Card className="h-full hover:shadow-xl transition-all group overflow-hidden">
       <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }}>
-        {p.premium && <Badge className="absolute top-3 left-3 bg-orange-500 hover:bg-orange-500">PREMIUM</Badge>}
-        {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-emerald-600" /></div>}
+        {p.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
+        {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-accent" /></div>}
       </div>
       <CardContent className="p-4">
-        <div className="font-bold group-hover:text-blue-600 truncate">{p.name}</div>
-        <div className="text-xs text-slate-500 mt-0.5">{p.categoryName}</div>
+        <div className="font-bold group-hover:text-primary transition-colors truncate">{p.name}</div>
+        <div className="text-xs text-muted-foreground mt-0.5">{p.categoryName}</div>
         <div className="flex items-center gap-1 mt-2 text-sm">
-          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+          <Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" />
           <span className="font-semibold">{p.rating}</span>
-          <span className="text-slate-400">({p.reviewCount})</span>
+          <span className="text-muted-foreground">({p.reviewCount})</span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-slate-500 mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
         <div className="flex gap-2 mt-3">
-          <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-blue-50 text-blue-700 text-xs font-medium grid place-items-center hover:bg-blue-100"><Phone className="w-3 h-3 mr-1" />Call</a>
+          <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><Phone className="w-3 h-3 mr-1" />Call</a>
           <a href={`https://wa.me/${p.whatsapp?.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-emerald-50 text-emerald-700 text-xs font-medium grid place-items-center hover:bg-emerald-100"><MessageCircle className="w-3 h-3 mr-1" />WhatsApp</a>
         </div>
       </CardContent>
@@ -626,10 +440,10 @@ function MiniCard({ p }) {
       <Card className="hover:shadow-lg transition-shadow overflow-hidden group">
         <div className="aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${p.images?.[0]})` }} />
         <CardContent className="p-3">
-          <div className="font-semibold text-sm truncate group-hover:text-blue-600">{p.name}</div>
+          <div className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{p.name}</div>
           <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-1 text-xs"><Star className="w-3 h-3 fill-yellow-400 text-yellow-400" /><span>{p.rating}</span></div>
-            <div className="text-xs text-slate-500">{p.city}</div>
+            <div className="flex items-center gap-1 text-xs"><Star className="w-3 h-3 fill-[#F5A623] text-[#F5A623]" /><span>{p.rating}</span></div>
+            <div className="text-xs text-muted-foreground">{p.city}</div>
           </div>
         </CardContent>
       </Card>

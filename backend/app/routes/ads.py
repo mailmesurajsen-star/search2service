@@ -33,7 +33,7 @@ class AdCreatePayload(BaseModel):
     ctaText: Optional[str] = "Explore Now"
     advertiserName: Optional[str] = ""
     advertiserPhone: Optional[str] = ""
-    gradient: Optional[str] = "from-blue-600 via-indigo-600 to-orange-500"
+    gradient: Optional[str] = "from-blue-600/10 via-indigo-600/10 to-orange-500/10"
     startDate: Optional[str] = None
     endDate: Optional[str] = None
     status: Optional[str] = "active"  # active, inactive, expired, draft

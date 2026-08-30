@@ -12,6 +12,22 @@ async def health_check():
         "ts": int(time.time() * 1000)
     }
 
+@router.get("/settings")
+async def get_public_settings():
+    db = get_db()
+    settings = await db.system_settings.find_one({"key": "platform_config"})
+    settings = settings or {}
+    return {
+        "platformName": settings.get("platformName", "Search2Service"),
+        "supportPhone": settings.get("supportPhone", ""),
+        "supportEmail": settings.get("supportEmail", ""),
+        "emergencyNotice": settings.get("emergencyNotice", ""),
+        "noticeActive": settings.get("noticeActive", False),
+        "maintenanceMode": settings.get("maintenanceMode", False),
+        "playStoreUrl": settings.get("playStoreUrl", ""),
+        "appStoreUrl": settings.get("appStoreUrl", ""),
+    }
+
 @router.get("/stats")
 async def get_stats():
     db = get_db()

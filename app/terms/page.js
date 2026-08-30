@@ -42,7 +42,7 @@ export default function TermsPage() {
           Providers may choose a paid Premium plan for priority placement and additional features. Payments are
           processed securely via our payment gateway partner. Plan pricing and features are shown on the Plan
           selection page and may change with notice. See our{' '}
-          <a href="/refund-policy" className="text-indigo-600 font-semibold hover:underline">Refund Policy</a> for cancellation terms.
+          <a href="/refund-policy" className="text-primary font-semibold hover:underline">Refund Policy</a> for cancellation terms.
         </p>
       </LegalSection>
 
@@ -67,7 +67,7 @@ export default function TermsPage() {
           To the fullest extent permitted by law, Search2Service shall not be liable for any indirect, incidental,
           or consequential damages arising from your use of the Platform or any interaction with a Provider or
           Customer. See our{' '}
-          <a href="/disclaimer" className="text-indigo-600 font-semibold hover:underline">Disclaimer</a> for further details.
+          <a href="/disclaimer" className="text-primary font-semibold hover:underline">Disclaimer</a> for further details.
         </p>
       </LegalSection>
 
@@ -88,8 +88,8 @@ export default function TermsPage() {
       <LegalSection title="11. Contact Us">
         <p>
           Questions about these Terms can be sent to{' '}
-          <a href="mailto:legal@search2service.in" className="text-indigo-600 font-semibold hover:underline">legal@search2service.in</a> or via our{' '}
-          <a href="/contact" className="text-indigo-600 font-semibold hover:underline">Contact page</a>.
+          <a href="mailto:search2service@gmail.com" className="text-primary font-semibold hover:underline">search2service@gmail.com</a> or via our{' '}
+          <a href="/contact" className="text-primary font-semibold hover:underline">Contact page</a>.
         </p>
       </LegalSection>
     </LegalPage>

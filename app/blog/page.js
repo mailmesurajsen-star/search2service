@@ -36,10 +36,10 @@ export default function BlogPage() {
     <div className="min-h-screen bg-white">
       <SiteHeader />
 
-      <section className="bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 text-white py-16">
+      <section className="bg-primary text-white py-16">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Search2Service Blog</h1>
-          <p className="text-slate-300 mt-4 text-base sm:text-lg leading-relaxed">
+          <p className="text-white/80 mt-4 text-base sm:text-lg leading-relaxed">
             Tips, guides, and updates to help you get the most out of local services across India.
           </p>
         </div>
@@ -48,21 +48,21 @@ export default function BlogPage() {
       <section className="container mx-auto px-4 py-14 max-w-4xl">
         <div className="grid sm:grid-cols-2 gap-6">
           {POSTS.map(p => (
-            <article key={p.title} className="border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-indigo-200 transition">
-              <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
-                <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full"><Tag className="w-3 h-3" />{p.tag}</span>
+            <article key={p.title} className="border border-border rounded-2xl p-5 hover:shadow-lg hover:border-accent/40 transition">
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
+                <span className="inline-flex items-center gap-1 bg-accent/10 text-accent font-semibold px-2.5 py-1 rounded-full"><Tag className="w-3 h-3" />{p.tag}</span>
                 <span className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" />{p.date}</span>
               </div>
-              <h2 className="text-lg font-bold text-slate-900 leading-snug mb-2">{p.title}</h2>
-              <p className="text-sm text-slate-600 leading-relaxed mb-3">{p.excerpt}</p>
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-indigo-600">
+              <h2 className="text-lg font-bold text-foreground leading-snug mb-2">{p.title}</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">{p.excerpt}</p>
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent">
                 Read more <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </article>
           ))}
         </div>
 
-        <div className="mt-12 text-center text-sm text-slate-500">
+        <div className="mt-12 text-center text-sm text-muted-foreground">
           More stories coming soon — check back regularly for fresh tips and platform updates.
         </div>
       </section>

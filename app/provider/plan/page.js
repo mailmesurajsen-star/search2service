@@ -70,7 +70,7 @@ export default function ProviderPlanPage() {
     fetch('/api/provider/plan/gateway-status').then(r => r.json()).then(setGatewayStatus).catch(() => setGatewayStatus({ enabled: false }));
   }, [user]);
 
-  if (loading || !user) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   const currentPlan = user.plan || null;
 
@@ -146,13 +146,13 @@ export default function ProviderPlanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           {user.plan ? (
             <Link href="/provider/dashboard" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Dashboard</Link>
           ) : (
-            <span className="text-sm font-semibold text-slate-700">Welcome! Choose a plan to continue</span>
+            <span className="text-sm font-semibold text-foreground">Welcome! Choose a plan to continue</span>
           )}
         </div>
       </header>
@@ -163,39 +163,39 @@ export default function ProviderPlanPage() {
             <div className="text-center mb-6">
               <div className="w-16 h-16 rounded-full bg-emerald-100 grid place-items-center text-emerald-600 mx-auto mb-4"><CheckCircle2 className="w-9 h-9" /></div>
               <h1 className="text-2xl font-bold">Payment Confirmed</h1>
-              <p className="text-slate-500 mt-1 text-sm">Your Premium plan is now active. Here's your bill for this transaction.</p>
+              <p className="text-muted-foreground mt-1 text-sm">Your Premium plan is now active. Here's your bill for this transaction.</p>
             </div>
 
             <Card className="border-emerald-200">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-5 pb-4 border-b border-dashed border-slate-200">
-                  <div className="flex items-center gap-2 font-bold text-slate-900"><ReceiptText className="w-5 h-5 text-emerald-600" /> Invoice</div>
+                <div className="flex items-center justify-between mb-5 pb-4 border-b border-dashed border-border">
+                  <div className="flex items-center gap-2 font-bold text-foreground"><ReceiptText className="w-5 h-5 text-emerald-600" /> Invoice</div>
                   <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">PAID</Badge>
                 </div>
                 <div className="space-y-2.5 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">Invoice No.</span><span className="font-mono font-semibold text-slate-900">{paidInvoice.invoiceNumber}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Billed To</span><span className="font-medium text-slate-900">{user.name}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Plan</span><span className="font-medium text-slate-900">Premium (Monthly)</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Payment ID</span><span className="font-mono text-xs text-slate-700">{paidInvoice.razorpayPaymentId}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Date</span><span className="text-slate-900">{paidInvoice.paidAt ? new Date(paidInvoice.paidAt).toLocaleString('en-IN') : ''}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Invoice No.</span><span className="font-mono font-semibold text-foreground">{paidInvoice.invoiceNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Billed To</span><span className="font-medium text-foreground">{user.name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-medium text-foreground">Premium (Monthly)</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Payment ID</span><span className="font-mono text-xs text-foreground/80">{paidInvoice.razorpayPaymentId}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="text-foreground">{paidInvoice.paidAt ? new Date(paidInvoice.paidAt).toLocaleString('en-IN') : ''}</span></div>
                 </div>
-                <div className="flex justify-between items-center mt-5 pt-4 border-t border-dashed border-slate-200">
-                  <span className="font-bold text-slate-900">Amount Paid</span>
+                <div className="flex justify-between items-center mt-5 pt-4 border-t border-dashed border-border">
+                  <span className="font-bold text-foreground">Amount Paid</span>
                   <span className="text-2xl font-extrabold text-emerald-700">₹{paidInvoice.amount}</span>
                 </div>
               </CardContent>
             </Card>
 
-            <Button onClick={() => router.push('/provider/dashboard')} className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button onClick={() => router.push('/provider/dashboard')} className="w-full mt-6 bg-primary hover:bg-primary/90 text-white">
               Continue to Dashboard <ArrowRight className="w-4 h-4 ml-1.5" />
             </Button>
           </div>
         ) : (
         <>
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 grid place-items-center text-white mx-auto mb-3"><Crown className="w-7 h-7" /></div>
+          <div className="w-14 h-14 rounded-2xl bg-primary grid place-items-center text-white mx-auto mb-3"><Crown className="w-7 h-7" /></div>
           <h1 className="text-3xl font-bold">Choose Your Plan</h1>
-          <p className="text-slate-500 mt-1">Pick the plan that fits your business — upgrade or downgrade anytime.</p>
+          <p className="text-muted-foreground mt-1">Pick the plan that fits your business — upgrade or downgrade anytime.</p>
           <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 inline-flex items-center gap-1.5 px-3 py-1 rounded-full mt-3">
             <ShieldCheck className="w-3.5 h-3.5" /> Secure checkout via Razorpay — Premium activates only after payment is confirmed
           </p>
@@ -205,9 +205,9 @@ export default function ProviderPlanPage() {
           {PLANS.map(p => {
             const isCurrent = currentPlan === p.id;
             return (
-              <Card key={p.id} className={`relative overflow-hidden ${p.popular ? 'border-orange-300 shadow-lg shadow-orange-100' : ''}`}>
+              <Card key={p.id} className={`relative overflow-hidden ${p.popular ? 'border-[#F5A623]/40 shadow-lg shadow-[#F5A623]/10' : ''}`}>
                 {p.popular && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-red-600 text-white text-[11px] font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
+                  <div className="absolute top-0 right-0 bg-[#F5A623] text-white text-[11px] font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
                     <Sparkles className="w-3 h-3" /> MOST POPULAR
                   </div>
                 )}
@@ -217,17 +217,17 @@ export default function ProviderPlanPage() {
                       <h3 className="text-xl font-bold">{p.name}</h3>
                       {isCurrent && <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Current Plan</Badge>}
                     </div>
-                    <p className="text-sm text-slate-500 mt-0.5">{p.tagline}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">{p.tagline}</p>
                   </div>
 
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-extrabold">{p.id === 'premium' && gatewayStatus?.enabled && gatewayStatus?.amount ? `₹${gatewayStatus.amount}` : p.price}</span>
-                    {p.priceSuffix && <span className="text-sm text-slate-500">{p.priceSuffix}</span>}
+                    {p.priceSuffix && <span className="text-sm text-muted-foreground">{p.priceSuffix}</span>}
                   </div>
 
                   <ul className="space-y-2.5">
                     {p.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                      <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                         <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span>{f}</span>
                       </li>
@@ -237,7 +237,7 @@ export default function ProviderPlanPage() {
                   <Button
                     onClick={() => choosePlan(p.id)}
                     disabled={isCurrent || switching === p.id}
-                    className={`w-full ${p.id === 'premium' ? 'bg-gradient-to-r from-amber-500 to-red-600 hover:opacity-90 text-white' : ''}`}
+                    className={`w-full ${p.id === 'premium' ? 'bg-[#F5A623] hover:bg-[#F5A623]/90 text-white' : ''}`}
                     variant={p.id === 'premium' ? 'default' : 'outline'}
                   >
                     {switching === p.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}

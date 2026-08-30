@@ -20,20 +20,20 @@ export default function ProviderAnalyticsPage() {
 
   const maxV = Math.max(1, ...data.series.map(s => s.views));
 
-  if (loading || !user) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   const kpis = [
-    { icon: Eye, label: 'Profile Views (7d)', value: data.views, color: 'from-blue-500 to-indigo-600' },
-    { icon: MessageCircle, label: 'Leads (7d)', value: data.leads, color: 'from-emerald-500 to-teal-600' },
-    { icon: ClipboardList, label: 'Bookings', value: data.bookings, color: 'from-fuchsia-500 to-purple-600' },
-    { icon: Wallet, label: 'Est. Revenue', value: `₹${(data.revenue || 0).toLocaleString('en-IN')}`, color: 'from-amber-500 to-orange-600' },
-    { icon: Star, label: 'Rating', value: data.rating || '—', color: 'from-rose-500 to-pink-600' },
-    { icon: Users, label: 'Reviews', value: data.reviews, color: 'from-slate-700 to-slate-900' },
+    { icon: Eye, label: 'Profile Views (7d)', value: data.views, color: 'from-primary to-primary/80' },
+    { icon: MessageCircle, label: 'Leads (7d)', value: data.leads, color: 'from-accent to-accent/80' },
+    { icon: ClipboardList, label: 'Bookings', value: data.bookings, color: 'from-primary to-primary/80' },
+    { icon: Wallet, label: 'Est. Revenue', value: `₹${(data.revenue || 0).toLocaleString('en-IN')}`, color: 'from-accent to-accent/80' },
+    { icon: Star, label: 'Rating', value: data.rating || '—', color: 'from-[#F5A623] to-[#D97706]' },
+    { icon: Users, label: 'Reviews', value: data.reviews, color: 'from-primary to-primary/80' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/provider/dashboard" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Dashboard</Link>
           <h1 className="font-bold ml-2">Analytics</h1>
@@ -46,32 +46,32 @@ export default function ProviderAnalyticsPage() {
             <Card key={k.label}><CardContent className="p-4">
               <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${k.color} grid place-items-center text-white mb-2`}><k.icon className="w-4 h-4" /></div>
               <div className="text-xl font-bold">{k.value}</div>
-              <div className="text-[11px] text-slate-500">{k.label}</div>
+              <div className="text-[11px] text-muted-foreground">{k.label}</div>
             </CardContent></Card>
           ))}
         </div>
 
         <Card><CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-600" />Weekly traffic</div>
-            <div className="text-xs text-slate-500">Last 7 days</div>
+            <div className="font-bold flex items-center gap-2"><TrendingUp className="w-4 h-4 text-accent" />Weekly traffic</div>
+            <div className="text-xs text-muted-foreground">Last 7 days</div>
           </div>
           <div className="h-48 flex items-end justify-between gap-3">
             {data.series.map((s, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-2">
                 <div className="w-full flex flex-col items-center gap-1" style={{ height: 160 }}>
                   <div className="w-full flex items-end gap-1 h-full">
-                    <div className="flex-1 rounded-t bg-gradient-to-t from-blue-600 to-blue-400" style={{ height: `${(s.views / maxV) * 100}%` }} title={`Views: ${s.views}`} />
-                    <div className="flex-1 rounded-t bg-gradient-to-t from-emerald-500 to-emerald-300" style={{ height: `${(s.leads / maxV) * 100}%` }} title={`Leads: ${s.leads}`} />
+                    <div className="flex-1 rounded-t bg-gradient-to-t from-primary to-primary/70" style={{ height: `${(s.views / maxV) * 100}%` }} title={`Views: ${s.views}`} />
+                    <div className="flex-1 rounded-t bg-gradient-to-t from-accent to-accent/70" style={{ height: `${(s.leads / maxV) * 100}%` }} title={`Leads: ${s.leads}`} />
                   </div>
                 </div>
-                <div className="text-xs text-slate-500">{s.day}</div>
+                <div className="text-xs text-muted-foreground">{s.day}</div>
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-4 mt-4 text-xs text-slate-600">
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block" />Views</div>
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" />Leads</div>
+          <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary inline-block" />Views</div>
+            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-accent inline-block" />Leads</div>
           </div>
         </CardContent></Card>
       </div>

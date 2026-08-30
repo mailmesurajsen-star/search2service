@@ -33,8 +33,8 @@ export default function RefundPolicyPage() {
 
       <LegalSection title="4. How to Request a Refund">
         <p>
-          Email <a href="mailto:billing@search2service.in" className="text-indigo-600 font-semibold hover:underline">billing@search2service.in</a> or use our{' '}
-          <a href="/contact" className="text-indigo-600 font-semibold hover:underline">Contact page</a> with your registered email and payment/order ID. Approved refunds are processed to
+          Email <a href="mailto:search2service@gmail.com" className="text-primary font-semibold hover:underline">search2service@gmail.com</a> or use our{' '}
+          <a href="/contact" className="text-primary font-semibold hover:underline">Contact page</a> with your registered email and payment/order ID. Approved refunds are processed to
           the original payment method within 7–10 business days.
         </p>
       </LegalSection>

@@ -50,16 +50,16 @@ function SearchInner() {
   }, [q, state, city, category, group, premium, verified, sort]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             <ChevronLeft className="w-5 h-5" />
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-orange-500 grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold text-xs">S2</div>
             <span className="font-bold hidden sm:inline">Search2Service</span>
           </Link>
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search services, businesses..." className="pl-9 h-10" />
           </div>
         </div>
@@ -72,7 +72,7 @@ function SearchInner() {
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center gap-2 font-semibold"><SlidersHorizontal className="w-4 h-4" />Filters</div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">Category</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
                 <Select value={category || 'all'} onValueChange={v => setCategory(v === 'all' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
                   <SelectContent className="max-h-72">
@@ -82,7 +82,7 @@ function SearchInner() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">State</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">State</label>
                 <Select value={state || 'all'} onValueChange={v => {
                   const nextState = v === 'all' ? '' : v;
                   setState(nextState);
@@ -99,7 +99,7 @@ function SearchInner() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 mb-1 block">City</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">City</label>
                 <Select value={city || 'all'} onValueChange={v => setCity(v === 'all' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="All Cities" /></SelectTrigger>
                   <SelectContent className="max-h-72">
@@ -134,7 +134,7 @@ function SearchInner() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold">{loading ? 'Searching...' : `${total} results`}</h1>
-              <div className="text-sm text-slate-500 mt-1">
+              <div className="text-sm text-muted-foreground mt-1">
                 {[category && categories.find(c => c.slug === category)?.name, city, state].filter(Boolean).join(' • ') || 'All services across India'}
               </div>
             </div>
@@ -150,13 +150,13 @@ function SearchInner() {
 
           {loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {[...Array(9)].map((_, i) => <div key={i} className="h-64 bg-slate-200 rounded-xl animate-pulse" />)}
+              {[...Array(9)].map((_, i) => <div key={i} className="h-64 bg-muted rounded-xl animate-pulse" />)}
             </div>
           ) : items.length === 0 ? (
             <Card><CardContent className="p-12 text-center">
-              <Filter className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+              <Filter className="w-12 h-12 mx-auto text-border mb-3" />
               <div className="text-lg font-semibold">No results found</div>
-              <div className="text-slate-500 text-sm mt-1">Try changing your filters or search terms.</div>
+              <div className="text-muted-foreground text-sm mt-1">Try changing your filters or search terms.</div>
             </CardContent></Card>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -164,22 +164,22 @@ function SearchInner() {
                 <div key={p.id} onClick={() => router.push(`/providers/${p.id}`)} className="cursor-pointer h-full">
                 <Card className="h-full hover:shadow-xl transition-shadow group overflow-hidden">
                     <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }}>
-                      {p.premium && <Badge className="absolute top-3 left-3 bg-orange-500 hover:bg-orange-500">PREMIUM</Badge>}
+                      {p.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
                       {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-emerald-600" /></div>}
                     </div>
                     <CardContent className="p-4">
-                      <div className="font-bold group-hover:text-blue-600">{p.name}</div>
-                      {p.doctorName && <div className="text-xs text-slate-600 font-medium">{p.doctorName}</div>}
-                      <div className="text-xs text-slate-500 mt-0.5">{p.categoryName} {p.specialization && `• ${p.specialization}`}</div>
+                      <div className="font-bold group-hover:text-primary transition-colors">{p.name}</div>
+                      {p.doctorName && <div className="text-xs text-muted-foreground font-medium">{p.doctorName}</div>}
+                      <div className="text-xs text-muted-foreground mt-0.5">{p.categoryName} {p.specialization && `• ${p.specialization}`}</div>
                       <div className="flex items-center gap-1 mt-2 text-sm">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" />
                         <span className="font-semibold">{p.rating}</span>
-                        <span className="text-slate-400">({p.reviewCount} reviews)</span>
+                        <span className="text-muted-foreground">({p.reviewCount} reviews)</span>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-slate-500 mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
-                      {p.fees && <div className="text-xs text-slate-600 mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
+                      {p.fees && <div className="text-xs text-muted-foreground mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
                       <div className="flex gap-2 mt-3">
-                        <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-blue-50 text-blue-700 text-xs font-medium grid place-items-center hover:bg-blue-100"><Phone className="w-3 h-3 mr-1" />Call</a>
+                        <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><Phone className="w-3 h-3 mr-1" />Call</a>
                         <a href={`https://wa.me/${p.whatsapp?.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-emerald-50 text-emerald-700 text-xs font-medium grid place-items-center hover:bg-emerald-100"><MessageCircle className="w-3 h-3 mr-1" />WhatsApp</a>
                       </div>
                     </CardContent>

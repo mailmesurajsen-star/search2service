@@ -6,8 +6,13 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env.loca
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
 load_dotenv()
 
-MONGO_URL = os.getenv("MONGO_URL", "mongodb://127.0.0.1:27017/search2service")
-DB_NAME = os.getenv("DB_NAME", "search2service")
+DB_ENGINE = os.getenv("DB_ENGINE", "sqlite")  # "sqlite" (default, zero-install) or "mysql"
+SQLITE_PATH = os.getenv("SQLITE_PATH", os.path.join(os.path.dirname(__file__), '..', 'data', 'search2service.db'))
+MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+MYSQL_PORT = int(os.getenv("MYSQL_PORT", 3306))
+MYSQL_USER = os.getenv("MYSQL_USER", "root")
+MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "search2service")
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-fallback-not-safe")
 COOKIE_NAME = "s2s_token"
 JWT_EXPIRATION_SECONDS = 60 * 60 * 24 * 30  # 30 days

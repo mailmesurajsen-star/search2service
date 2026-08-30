@@ -16,38 +16,38 @@ export default function CustomerDashboard() {
     else if (user && !['customer', 'provider', 'admin', 'super_admin'].includes(user.role)) router.replace('/');
   }, [user, loading, router]);
 
-  if (loading || !user) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   const tiles = [
-    { icon: Bookmark, label: 'My Bookings', count: 0, color: 'from-blue-500 to-blue-700' },
-    { icon: ClipboardList, label: 'Appointments', count: 0, color: 'from-emerald-500 to-teal-600' },
-    { icon: Heart, label: 'Wishlist', count: 0, color: 'from-rose-500 to-pink-600' },
-    { icon: Star, label: 'My Reviews', count: 0, color: 'from-amber-500 to-orange-600' },
-    { icon: Bell, label: 'Notifications', count: 0, color: 'from-purple-500 to-fuchsia-600' },
-    { icon: Wallet, label: 'Wallet', count: '₹0', color: 'from-slate-700 to-slate-900' },
+    { icon: Bookmark, label: 'My Bookings', count: 0, color: 'from-primary to-primary/80' },
+    { icon: ClipboardList, label: 'Appointments', count: 0, color: 'from-accent to-accent/80' },
+    { icon: Heart, label: 'Wishlist', count: 0, color: 'from-primary to-primary/80' },
+    { icon: Star, label: 'My Reviews', count: 0, color: 'from-[#F5A623] to-[#D97706]' },
+    { icon: Bell, label: 'Notifications', count: 0, color: 'from-accent to-accent/80' },
+    { icon: Wallet, label: 'Wallet', count: '₹0', color: 'from-primary to-primary/80' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-orange-500 grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold text-xs">S2</div>
             <span className="font-bold">Search2Service</span>
           </Link>
           <div className="flex-1" />
-          <div className="text-sm text-slate-600 hidden sm:block">Hi, {user.name}</div>
+          <div className="text-sm text-muted-foreground hidden sm:block">Hi, {user.name}</div>
           <Button size="sm" variant="outline" onClick={async () => { await logout(); router.push('/'); }}><LogOut className="w-3.5 h-3.5 mr-1" />Sign out</Button>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <Card className="bg-gradient-to-br from-blue-600 to-orange-500 text-white border-0 mb-6">
+        <Card className="bg-primary text-white border-0 mb-6">
           <CardContent className="p-8 flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur grid place-items-center text-2xl font-bold">{user.name[0]}</div>
             <div>
               <div className="text-2xl font-bold">{user.name}</div>
-              <div className="text-blue-50 text-sm">{user.email}</div>
+              <div className="text-white/80 text-sm">{user.email}</div>
               <div className="text-xs mt-1 opacity-90">Customer Account • Member since {new Date(user.createdAt).toLocaleDateString()}</div>
             </div>
           </CardContent>
@@ -62,7 +62,7 @@ export default function CustomerDashboard() {
                   <div className="font-semibold text-sm">{t.label}</div>
                   <div className="text-2xl font-bold">{t.count}</div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />
+                <ChevronRight className="w-4 h-4 text-border group-hover:text-muted-foreground" />
               </CardContent>
             </Card>
           ))}
@@ -71,13 +71,13 @@ export default function CustomerDashboard() {
         <Card><CardContent className="p-6">
           <h3 className="font-bold mb-3">Explore</h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            <Link href="/" className="p-4 rounded-lg bg-slate-50 hover:bg-blue-50 border block">
+            <Link href="/" className="p-4 rounded-lg bg-muted/50 hover:bg-accent/10 border block">
               <div className="font-semibold">Browse services →</div>
-              <div className="text-sm text-slate-500">Find and book from 300+ providers</div>
+              <div className="text-sm text-muted-foreground">Find and book from 300+ providers</div>
             </Link>
-            <Link href="/categories" className="p-4 rounded-lg bg-slate-50 hover:bg-blue-50 border block">
+            <Link href="/categories" className="p-4 rounded-lg bg-muted/50 hover:bg-accent/10 border block">
               <div className="font-semibold">All 84 categories →</div>
-              <div className="text-sm text-slate-500">Healthcare, home services, jobs & more</div>
+              <div className="text-sm text-muted-foreground">Healthcare, home services, jobs & more</div>
             </Link>
           </div>
         </CardContent></Card>

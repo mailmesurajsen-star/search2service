@@ -57,7 +57,7 @@ export default function DisclaimerPage() {
       <LegalSection title="7. Contact Us">
         <p>
           If you believe any content on Search2Service is inaccurate or misleading, please let us know via our{' '}
-          <a href="/contact" className="text-indigo-600 font-semibold hover:underline">Contact page</a>.
+          <a href="/contact" className="text-primary font-semibold hover:underline">Contact page</a>.
         </p>
       </LegalSection>
     </LegalPage>

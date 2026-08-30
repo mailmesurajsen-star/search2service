@@ -43,11 +43,11 @@ export default function JobSeekerProfilePage() {
     finally { setSaving(false); }
   };
 
-  if (loading || !user) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200">
+    <div className="min-h-screen bg-muted/30">
+      <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Home</Link>
           <div className="flex-1" />
@@ -57,10 +57,10 @@ export default function JobSeekerProfilePage() {
 
       <div className="container mx-auto px-4 py-8 max-w-2xl space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-indigo-600 grid place-items-center text-white"><UserCircle2 className="w-6 h-6" /></div>
+          <div className="w-11 h-11 rounded-xl bg-primary grid place-items-center text-white"><UserCircle2 className="w-6 h-6" /></div>
           <div>
             <h1 className="text-2xl font-bold">Job Seeker Profile</h1>
-            <p className="text-slate-500 text-sm">Complete your profile so employers can find and contact you</p>
+            <p className="text-muted-foreground text-sm">Complete your profile so employers can find and contact you</p>
           </div>
         </div>
 
@@ -68,8 +68,8 @@ export default function JobSeekerProfilePage() {
         <Card><CardContent className="p-5 space-y-3">
           <h3 className="font-bold flex items-center gap-2"><UserCircle2 className="w-4 h-4" />Profile Photo</h3>
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-slate-100 bg-cover bg-center border border-slate-200 flex-shrink-0 grid place-items-center overflow-hidden" style={p.photo ? { backgroundImage: `url(${p.photo})` } : {}}>
-              {!p.photo && <UserCircle2 className="w-10 h-10 text-slate-300" />}
+            <div className="w-20 h-20 rounded-full bg-muted bg-cover bg-center border border-border flex-shrink-0 grid place-items-center overflow-hidden" style={p.photo ? { backgroundImage: `url(${p.photo})` } : {}}>
+              {!p.photo && <UserCircle2 className="w-10 h-10 text-border" />}
             </div>
             <div className="flex-1">
               <FileUploader context="jobseeker-photo" ownerId={user.id} accept="image/jpeg,image/png,image/webp" buttonLabel="Upload profile photo" onUploaded={(f) => setP(x => ({ ...x, photo: f.url }))} />
@@ -110,7 +110,7 @@ export default function JobSeekerProfilePage() {
                 <CheckCircle2 className="w-4 h-4" />
                 <a href={p.resumeUrl} target="_blank" rel="noreferrer" className="font-medium underline">{p.resumeName || 'View uploaded resume'}</a>
               </div>
-              <button onClick={() => setP(x => ({ ...x, resumeUrl: '', resumeName: '' }))} className="text-slate-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+              <button onClick={() => setP(x => ({ ...x, resumeUrl: '', resumeName: '' }))} className="text-muted-foreground hover:text-destructive"><X className="w-4 h-4" /></button>
             </div>
           ) : (
             <FileUploader
@@ -124,7 +124,7 @@ export default function JobSeekerProfilePage() {
         </CardContent></Card>
 
         <div className="flex justify-end pt-2">
-          <Button onClick={save} disabled={saving} size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white"><Save className="w-4 h-4 mr-2" />{saving ? 'Saving...' : 'Save Profile'}</Button>
+          <Button onClick={save} disabled={saving} size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground"><Save className="w-4 h-4 mr-2" />{saving ? 'Saving...' : 'Save Profile'}</Button>
         </div>
       </div>
     </div>
