@@ -609,21 +609,15 @@ def build_locations():
 async def ensure_seed():
     db = get_db()
     
-    # 1. Seed categories, providers, reviews, jobs if empty
+    # 1. Seed categories if empty (structural reference data — kept even after dummy-data cleanup)
     cat_count = await db.categories.count_documents({})
     if cat_count == 0:
         cats = build_categories()
         if cats:
             await db.categories.insert_many(cats)
-        provs = build_providers(cats)
-        if provs:
-            await db.providers.insert_many(provs)
-        revs = build_reviews(provs)
-        if revs:
-            await db.reviews.insert_many(revs)
-        jobs = build_jobs()
-        if jobs:
-            await db.jobs.insert_many(jobs)
+    # NOTE: demo providers/reviews/jobs are intentionally no longer auto-seeded here —
+    # they were placeholder/dummy listings for local development only. Real providers
+    # are added by users via Business Profile or by admins via the Admin Console.
 
     # 2. Seed default hero slides if empty
     slide_count = await db.hero_slides.count_documents({})
@@ -632,12 +626,8 @@ async def ensure_seed():
         if slides:
             await db.hero_slides.insert_many(slides)
 
-    # 3. Seed default advertisements if empty
-    ad_count = await db.advertisements.count_documents({})
-    if ad_count == 0:
-        ads = build_ads()
-        if ads:
-            await db.advertisements.insert_many(ads)
+    # NOTE: demo advertisements are intentionally no longer auto-seeded here —
+    # real campaigns are created by admins via Admin Console > Ads Manager.
 
     # 4. Seed default locations if empty
     loc_count = await db.locations.count_documents({})
