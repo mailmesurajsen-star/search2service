@@ -1,40 +1,54 @@
-# Stage 1: Install dependencies
-FROM node:18-alpine AS deps
-RUN apk add --no-cache libc6-compat
+# Search2Service — single-container image running both the Next.js frontend
+# (standalone build) and the FastAPI backend, started together by start.sh.
+# Only the frontend's port is meant to be published; the backend stays on
+# 127.0.0.1 inside the container and is reached only via the frontend's
+# internal /api/* proxy (BACKEND_URL).
+
+# ---------- Stage 1: build the Next.js frontend ----------
+FROM node:20-slim AS frontend-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-
-# Stage 2: Rebuild the source code
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+# BACKEND_URL must be present at build time too — next.config.js reads it inside
+# rewrites() to decide how /api/* gets proxied to the backend.
+ENV BACKEND_URL=http://127.0.0.1:8000
+RUN npm run build && cp -r .next/static .next/standalone/.next/static
 
-# Stage 3: Production runner image
-FROM node:18-alpine AS runner
+# ---------- Stage 2: runtime image — Node (frontend) + Python (backend) ----------
+FROM node:20-slim AS runner
 WORKDIR /app
+
+# Python runtime + build headers for the FastAPI backend's dependencies
+# (cryptography/bcrypt/Pillow occasionally need to compile if no prebuilt wheel
+# matches the base image exactly — cheap to keep, safer than a failed pip install).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3 python3-pip python3-venv build-essential libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# --- Frontend (Next.js standalone output) ---
+COPY --from=frontend-builder /app/.next/standalone ./
+COPY --from=frontend-builder /app/.next/static ./.next/static
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# --- Backend (FastAPI) ---
+COPY backend ./backend
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY start.sh ./start.sh
+RUN chmod +x start.sh
 
-USER nextjs
+# Defaults — override JWT_SECRET (required), CORS_ORIGINS, DB_ENGINE/MYSQL_* etc.
+# via your platform's environment variable settings. See .env.example.
+ENV BACKEND_URL=http://127.0.0.1:8000
+ENV ENVIRONMENT=production
+ENV DB_ENGINE=sqlite
+ENV SQLITE_PATH=/app/backend/data/search2service.db
 
 EXPOSE 3000
-ENV PORT=3000
-
-CMD ["node", "server.js"]
+CMD ["./start.sh"]

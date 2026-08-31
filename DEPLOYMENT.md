@@ -10,7 +10,22 @@ This app is two processes behind one nginx reverse proxy:
 Tested against a small VPS (1 vCPU / a few GB RAM — e.g. Hostinger KVM 1) running
 Ubuntu 22.04/24.04. Debian works the same way with minor package-manager differences.
 
-## 1. One-time server setup
+**Two ways to run this on a VPS — pick one:**
+
+1. **Bare metal with systemd + nginx** (steps below) — you SSH in, install Node/Python/nginx
+   directly on the OS, and two systemd services run the two processes. Most control,
+   no extra abstraction layer.
+2. **One Docker container** — if your VPS/panel supports Docker (or a
+   Nixpacks-based PaaS like Railway/Coolify/Render), use the `Dockerfile` /
+   `nixpacks.toml` at the repo root instead. Both build the frontend and backend
+   together and run them via `start.sh` (backend on internal `127.0.0.1:8000`,
+   frontend on `0.0.0.0:$PORT`, proxying `/api/*` between them — same architecture,
+   just packaged as one container instead of two systemd services). Point the
+   platform's builder at this repo; if it auto-detects Nixpacks, it'll use
+   `nixpacks.toml`, if it builds a Dockerfile, it'll use `Dockerfile` — no other
+   setup needed beyond setting env vars (`JWT_SECRET` is required, same as below).
+
+## 1. One-time server setup (bare metal path)
 
 SSH into the VPS as root (or a sudo user), then:
 

@@ -1,0 +1,29 @@
+# Used by Nixpacks-based platforms (Railway, Coolify's Nixpacks builder, etc.) when
+# the platform is configured to build with Nixpacks instead of the Dockerfile.
+# Builds and runs BOTH the Next.js frontend and the FastAPI backend in one service.
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc"]
+
+[phases.install]
+cmds = [
+  "npm ci",
+  "python3 -m venv /opt/venv",
+  "/opt/venv/bin/pip install --no-cache-dir --upgrade pip",
+  "/opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt"
+]
+
+[phases.build]
+cmds = [
+  "npm run build",
+  "cp -r .next/static .next/standalone/.next/static"
+]
+
+[start]
+cmd = "bash start.sh"
+
+[variables]
+ENVIRONMENT = "production"
+BACKEND_URL = "http://127.0.0.1:8000"
+DB_ENGINE = "sqlite"
+SQLITE_PATH = "/app/backend/data/search2service.db"
