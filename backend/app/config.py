@@ -19,6 +19,14 @@ JWT_EXPIRATION_SECONDS = 60 * 60 * 24 * 30  # 30 days
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 IS_PRODUCTION = ENVIRONMENT.lower() == "production"
 
+# Refuse to boot in production with the known-insecure default secret — a weak/shared
+# JWT_SECRET lets anyone forge login tokens (including admin sessions).
+if IS_PRODUCTION and JWT_SECRET == "dev-fallback-not-safe":
+    raise RuntimeError(
+        "JWT_SECRET is not set. Set a strong, random JWT_SECRET environment variable "
+        "before running with ENVIRONMENT=production (e.g. `openssl rand -hex 32`)."
+    )
+
 EMERGENT_LLM_KEY = os.getenv("EMERGENT_LLM_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")

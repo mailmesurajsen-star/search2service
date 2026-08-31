@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.config import CORS_ORIGINS
 from app.seed_data import ensure_seed
 from app.routes import (
     auth,
@@ -40,10 +41,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
+# CORS middleware — defaults to "*" (dev-friendly); set CORS_ORIGINS to a comma-separated
+# list of allowed origins in production (e.g. https://yourdomain.com).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

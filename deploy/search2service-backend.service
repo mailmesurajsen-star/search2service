@@ -1,0 +1,19 @@
+[Unit]
+Description=Search2Service FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/search2service
+EnvironmentFile=/var/www/search2service/.env
+ExecStart=/var/www/search2service/backend/venv/bin/python /var/www/search2service/backend/run.py
+Restart=on-failure
+RestartSec=5
+# Small hardening — safe defaults for a service that only needs its own working directory
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

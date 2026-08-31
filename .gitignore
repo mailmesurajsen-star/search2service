@@ -33,6 +33,14 @@ dist
 # Environment files (comprehensive coverage)
 *token.json*
 *credentials.json*
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+
+# SQLite database files (local dev data — never ship real/dummy data via git)
+backend/data/
 
 # Logs and debug files
 npm-debug.log*

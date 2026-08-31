@@ -1,0 +1,31 @@
+name: Deploy to VPS
+
+# Auto-deploys to the VPS on every push to main by SSH-ing in and running deploy/deploy.sh.
+# Requires these repo secrets (Settings > Secrets and variables > Actions):
+#   VPS_HOST      - server IP or domain
+#   VPS_USER      - SSH user (e.g. deploy)
+#   VPS_SSH_KEY   - private key with access to that user (paste the whole PEM contents)
+#   VPS_PORT      - SSH port (optional, defaults to 22)
+#
+# If these secrets aren't set, this workflow simply has nothing to authenticate with and
+# will fail at the SSH step — remove/disable this file if you'd rather deploy manually.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /var/www/search2service
+            ./deploy/deploy.sh

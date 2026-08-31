@@ -1,0 +1,21 @@
+[Unit]
+Description=Search2Service Next.js frontend (standalone)
+After=network.target search2service-backend.service
+Wants=search2service-backend.service
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/search2service
+EnvironmentFile=/var/www/search2service/.env
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/node /var/www/search2service/.next/standalone/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,7 @@
+# Force LF line endings for files that run on the (Linux) VPS, regardless of the
+# committer's platform/git config — a CRLF shell script fails on Linux with
+# "$'\r': command not found".
+*.sh text eol=lf
+deploy/*.service text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf
