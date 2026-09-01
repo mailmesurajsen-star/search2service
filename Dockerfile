@@ -3,9 +3,14 @@
 # Only the frontend's port is meant to be published; the backend stays on
 # 127.0.0.1 inside the container and is reached only via the frontend's
 # internal /api/* proxy (BACKEND_URL).
+#
+# Uses Alpine base images to keep the image small — a smaller image downloads
+# and extracts faster, which matters on a small/low-bandwidth VPS where large
+# layer pulls can time out mid-transfer.
 
 # ---------- Stage 1: build the Next.js frontend ----------
-FROM node:20-slim AS frontend-builder
+FROM node:20-alpine AS frontend-builder
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -17,15 +22,15 @@ ENV BACKEND_URL=http://127.0.0.1:8000
 RUN npm run build && cp -r .next/static .next/standalone/.next/static
 
 # ---------- Stage 2: runtime image — Node (frontend) + Python (backend) ----------
-FROM node:20-slim AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Python runtime + build headers for the FastAPI backend's dependencies
-# (cryptography/bcrypt/Pillow occasionally need to compile if no prebuilt wheel
-# matches the base image exactly — cheap to keep, safer than a failed pip install).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 python3-pip python3-venv build-essential libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+# libc6-compat: Next.js standalone's native addons need it at runtime on Alpine,
+# not just at build time.
+# python3/py3-pip: backend runtime.
+# gcc/musl-dev/libffi-dev: fallback build headers, in case a backend dependency
+# (cryptography/bcrypt/Pillow) has no prebuilt musl wheel for this Python version.
+RUN apk add --no-cache libc6-compat python3 py3-pip gcc musl-dev libffi-dev
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -34,11 +39,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=frontend-builder /app/.next/standalone ./
 COPY --from=frontend-builder /app/.next/static ./.next/static
 
-# --- Backend (FastAPI) ---
+# --- Backend (FastAPI) --- installed straight into the system Python: this
+# container only ever runs this one app, so a venv buys nothing but adds a
+# dependency on the `venv` stdlib module being present. --break-system-packages
+# opts out of PEP 668's "externally managed" guard, which Alpine's python3
+# package enables by default.
 COPY backend ./backend
-RUN python3 -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --break-system-packages --no-cache-dir --upgrade pip \
+    && pip install --break-system-packages --no-cache-dir -r backend/requirements.txt
 
 COPY start.sh ./start.sh
 RUN chmod +x start.sh

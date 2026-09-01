@@ -8,7 +8,7 @@ export ENVIRONMENT="${ENVIRONMENT:-production}"
 export BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:8000}"
 
 echo "==> Starting backend (uvicorn) on 127.0.0.1:8000"
-HOST=127.0.0.1 PORT=8000 /opt/venv/bin/python backend/run.py &
+HOST=127.0.0.1 PORT=8000 python3 backend/run.py &
 BACKEND_PID=$!
 
 # Give the backend a moment to bind before the frontend starts proxying to it.
