@@ -53,12 +53,26 @@ function loadRazorpayScript() {
   });
 }
 
+const DURATIONS = [
+  { years: 1, label: '1 Year', discountPct: 0 },
+  { years: 2, label: '2 Years', discountPct: 10 },
+  { years: 3, label: '3 Years', discountPct: 20 },
+];
+
+function durationPrice(monthlyRate, years, discountPct) {
+  const base = monthlyRate * 12 * years;
+  const offer = Math.round(base * (100 - discountPct) / 100);
+  return { base, offer };
+}
+
 export default function ProviderPlanPage() {
   const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const [switching, setSwitching] = useState(null);
   const [gatewayStatus, setGatewayStatus] = useState(null); // null = unknown yet, { enabled, amount, keyId }
   const [paidInvoice, setPaidInvoice] = useState(null);
+  const [showDuration, setShowDuration] = useState(false);
+  const [selectedYears, setSelectedYears] = useState(1);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/auth?next=/provider/plan');
@@ -84,10 +98,14 @@ export default function ProviderPlanPage() {
     } else toast.error(d.error || d.detail || 'Failed to update plan');
   };
 
-  const payAndActivatePremium = async () => {
+  const payAndActivatePremium = async (years) => {
     let checkout;
     try {
-      const checkoutRes = await fetch('/api/provider/plan/checkout', { method: 'POST' });
+      const checkoutRes = await fetch('/api/provider/plan/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ years }),
+      });
       checkout = await checkoutRes.json();
       if (!checkoutRes.ok) { toast.error(checkout.error || checkout.detail || 'Failed to start checkout'); setSwitching(null); return; }
       await loadRazorpayScript();
@@ -134,15 +152,20 @@ export default function ProviderPlanPage() {
 
   const choosePlan = async (planId) => {
     if (planId === currentPlan) return;
+    if (planId === 'premium') { setShowDuration(true); return; }
     setSwitching(planId);
     try {
-      if (planId === 'premium') {
-        await payAndActivatePremium();
-        return; // switching cleared inside handler/dismiss callbacks
-      }
       await switchToBasic();
     } catch (e) { toast.error(e.message || 'Something went wrong'); }
-    finally { if (planId !== 'premium') setSwitching(null); }
+    finally { setSwitching(null); }
+  };
+
+  const confirmPremiumCheckout = async () => {
+    setSwitching('premium');
+    try {
+      await payAndActivatePremium(selectedYears);
+    } catch (e) { toast.error(e.message || 'Something went wrong'); }
+    // switching cleared inside handler/dismiss callbacks
   };
 
   return (
@@ -175,7 +198,7 @@ export default function ProviderPlanPage() {
                 <div className="space-y-2.5 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Invoice No.</span><span className="font-mono font-semibold text-foreground">{paidInvoice.invoiceNumber}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Billed To</span><span className="font-medium text-foreground">{user.name}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-medium text-foreground">Premium (Monthly)</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="font-medium text-foreground">Premium ({paidInvoice.planYears === 1 ? '1 Year' : `${paidInvoice.planYears || 1} Years`})</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Payment ID</span><span className="font-mono text-xs text-foreground/80">{paidInvoice.razorpayPaymentId}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span className="text-foreground">{paidInvoice.paidAt ? new Date(paidInvoice.paidAt).toLocaleString('en-IN') : ''}</span></div>
                 </div>
@@ -234,14 +257,56 @@ export default function ProviderPlanPage() {
                     ))}
                   </ul>
 
+                  {p.id === 'premium' && showDuration && !isCurrent && (() => {
+                    const monthlyRate = gatewayStatus?.enabled && gatewayStatus?.amount ? gatewayStatus.amount : 499;
+                    return (
+                      <div className="pt-1 border-t border-border space-y-3">
+                        <p className="text-xs font-semibold text-foreground pt-3">Choose subscription duration</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {DURATIONS.map(d => {
+                            const { base, offer } = durationPrice(monthlyRate, d.years, d.discountPct);
+                            const active = selectedYears === d.years;
+                            return (
+                              <button
+                                key={d.years}
+                                type="button"
+                                onClick={() => setSelectedYears(d.years)}
+                                className={`relative rounded-lg border p-2.5 text-center transition ${active ? 'border-[#F5A623] bg-[#F5A623]/10' : 'border-border hover:border-[#F5A623]/40'}`}
+                              >
+                                {d.discountPct > 0 && (
+                                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                    Save {d.discountPct}%
+                                  </span>
+                                )}
+                                <div className={`text-xs font-bold ${active ? 'text-[#F5A623]' : 'text-foreground'}`}>{d.label}</div>
+                                {d.discountPct > 0 && (
+                                  <div className="text-[10px] text-muted-foreground/70 line-through">₹{base.toLocaleString('en-IN')}</div>
+                                )}
+                                <div className="text-[11px] font-semibold text-foreground mt-0.5">₹{offer.toLocaleString('en-IN')}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <Button
-                    onClick={() => choosePlan(p.id)}
+                    onClick={() => p.id === 'premium' && showDuration ? confirmPremiumCheckout() : choosePlan(p.id)}
                     disabled={isCurrent || switching === p.id}
                     className={`w-full ${p.id === 'premium' ? 'bg-[#F5A623] hover:bg-[#F5A623]/90 text-white' : ''}`}
                     variant={p.id === 'premium' ? 'default' : 'outline'}
                   >
                     {switching === p.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    {isCurrent ? 'Currently Active' : switching === p.id ? (p.id === 'premium' ? 'Opening checkout…' : 'Activating…') : p.id === 'premium' ? 'Pay & Upgrade to Premium' : currentPlan ? 'Switch to Basic' : 'Choose Basic (Free)'}
+                    {isCurrent
+                      ? 'Currently Active'
+                      : switching === p.id
+                        ? (p.id === 'premium' ? 'Opening checkout…' : 'Activating…')
+                        : p.id === 'premium'
+                          ? (showDuration
+                              ? `Confirm & Pay ₹${durationPrice(gatewayStatus?.enabled && gatewayStatus?.amount ? gatewayStatus.amount : 499, selectedYears, DURATIONS.find(d => d.years === selectedYears).discountPct).offer.toLocaleString('en-IN')}`
+                              : 'Pay & Upgrade to Premium')
+                          : currentPlan ? 'Switch to Basic' : 'Choose Basic (Free)'}
                   </Button>
                 </CardContent>
               </Card>

@@ -55,7 +55,7 @@ function SearchInner() {
         <div className="container mx-auto px-4 h-16 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             <ChevronLeft className="w-5 h-5" />
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white"><Search className="w-4 h-4" /></div>
             <span className="font-bold hidden sm:inline">Search2Service</span>
           </Link>
           <div className="flex-1 relative">

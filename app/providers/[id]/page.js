@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { FileUploader } from '@/components/file-uploader';
 import {
   ChevronLeft, MapPin, Star, ShieldCheck, Phone, MessageCircle, Mail, Globe, Clock, IndianRupee,
-  Award, CheckCircle2, Calendar, User, Send
+  Award, CheckCircle2, Calendar, User, Send, Search
 } from 'lucide-react';
 
 export default function ProviderPage() {
@@ -53,7 +53,7 @@ export default function ProviderPage() {
         <div className="container mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" />Back</button>
           <Link href="/" className="flex items-center gap-2 ml-auto">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white"><Search className="w-3.5 h-3.5" /></div>
             <span className="font-bold">Search2Service</span>
           </Link>
         </div>
@@ -196,7 +196,7 @@ export default function ProviderPage() {
               <TabsContent value="book" className="mt-4">
                 <Card><CardContent className="p-6">
                   <h3 className="font-bold text-lg mb-4">Book Appointment</h3>
-                  <BookingForm providerId={id} defaultFee={p.fees} isDoctor={true} />
+                  <BookingForm providerId={id} defaultFee={p.fees} isDoctor={true} timings={p.timings} />
                 </CardContent></Card>
               </TabsContent>
             )}
@@ -250,16 +250,52 @@ export default function ProviderPage() {
   );
 }
 
-function BookingForm({ providerId, defaultFee, isDoctor }) {
-  const [form, setForm] = useState({ customerName: '', customerPhone: '', service: '', date: '', slot: 'morning', note: '' });
+const SLOT_STEP_MINUTES = 15;
+
+function parseTimeToMinutes(t) {
+  const m = (t || '').trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!m) return null;
+  let [, h, min, ap] = m;
+  h = parseInt(h, 10); min = parseInt(min, 10);
+  if (/pm/i.test(ap) && h !== 12) h += 12;
+  if (/am/i.test(ap) && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function minutesToTime(mins) {
+  let h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
+function generateSlots(rangeStr, stepMinutes = SLOT_STEP_MINUTES) {
+  if (!rangeStr) return [];
+  const [startStr, endStr] = rangeStr.split('-').map(s => s.trim());
+  const start = parseTimeToMinutes(startStr);
+  const end = parseTimeToMinutes(endStr);
+  if (start == null || end == null || end <= start) return [];
+  const slots = [];
+  for (let t = start; t < end; t += stepMinutes) slots.push(minutesToTime(t));
+  return slots;
+}
+
+function BookingForm({ providerId, defaultFee, isDoctor, timings }) {
+  const morningSlots = isDoctor ? generateSlots(timings?.morning) : [];
+  const eveningSlots = isDoctor ? generateSlots(timings?.evening) : [];
+  const hasSlots = morningSlots.length > 0 || eveningSlots.length > 0;
+
+  const [form, setForm] = useState({ customerName: '', customerPhone: '', service: '', date: '', slot: hasSlots ? '' : 'morning', note: '' });
   const [busy, setBusy] = useState(false);
   const submit = async () => {
     if (!form.customerName || !form.customerPhone || !form.date) { toast.error('Name, phone, and date are required'); return; }
+    if (hasSlots && !form.slot) { toast.error('Please select an appointment time'); return; }
     setBusy(true);
     const r = await fetch('/api/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ providerId, ...form }) });
     const d = await r.json();
     setBusy(false);
-    if (r.ok) { toast.success('Booking request sent! Provider will confirm via phone/WhatsApp.'); setForm({ customerName: '', customerPhone: '', service: '', date: '', slot: 'morning', note: '' }); }
+    if (r.ok) { toast.success('Booking request sent! Provider will confirm via phone/WhatsApp.'); setForm({ customerName: '', customerPhone: '', service: '', date: '', slot: hasSlots ? '' : 'morning', note: '' }); }
     else toast.error(d.error || 'Failed');
   };
   return (
@@ -274,10 +310,49 @@ function BookingForm({ providerId, defaultFee, isDoctor }) {
       <Input placeholder="Phone number" value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} />
       <Input placeholder="Service needed (optional)" value={form.service} onChange={e => setForm({ ...form, service: e.target.value })} />
       <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
-      <div className="grid grid-cols-2 gap-2">
-        <Button variant={form.slot === 'morning' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'morning' })}>Morning Slot</Button>
-        <Button variant={form.slot === 'evening' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'evening' })}>Evening Slot</Button>
-      </div>
+      {hasSlots ? (
+        <div className="space-y-3">
+          {morningSlots.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Morning — every 15 min</div>
+              <div className="flex flex-wrap gap-1.5">
+                {morningSlots.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm({ ...form, slot: t })}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${form.slot === t ? 'bg-accent text-accent-foreground border-accent' : 'bg-background border-border hover:border-accent/40 text-foreground'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {eveningSlots.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Evening — every 15 min</div>
+              <div className="flex flex-wrap gap-1.5">
+                {eveningSlots.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm({ ...form, slot: t })}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${form.slot === t ? 'bg-accent text-accent-foreground border-accent' : 'bg-background border-border hover:border-accent/40 text-foreground'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant={form.slot === 'morning' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'morning' })}>Morning Slot</Button>
+          <Button variant={form.slot === 'evening' ? 'default' : 'outline'} onClick={() => setForm({ ...form, slot: 'evening' })}>Evening Slot</Button>
+        </div>
+      )}
       <Textarea placeholder="Note (optional)" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} />
       <Button disabled={busy} onClick={submit} className="bg-accent hover:bg-accent/90 text-accent-foreground"><Calendar className="w-4 h-4 mr-2" />{busy ? 'Sending...' : 'Confirm Booking'}</Button>
     </div>

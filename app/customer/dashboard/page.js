@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/use-auth';
-import { User, Bookmark, Heart, Bell, Star, Wallet, ClipboardList, LogOut, ChevronRight } from 'lucide-react';
+import { User, Bookmark, Heart, Bell, Star, Wallet, ClipboardList, LogOut, ChevronRight, Search } from 'lucide-react';
 
 export default function CustomerDashboard() {
   const { user, loading, logout } = useAuth();
@@ -32,7 +32,7 @@ export default function CustomerDashboard() {
       <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white"><Search className="w-4 h-4" /></div>
             <span className="font-bold">Search2Service</span>
           </Link>
           <div className="flex-1" />

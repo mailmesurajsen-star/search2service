@@ -14,6 +14,9 @@ from app.config import EMERGENT_LLM_KEY, GEMINI_MODEL
 
 router = APIRouter(prefix="/api/provider", tags=["provider_portal"])
 
+# Longer commitment = bigger discount off the plain monthly*12*years rate.
+PLAN_DISCOUNT_PCT = {1: 0, 2: 10, 3: 20}
+
 class TimingsModel(BaseModel):
     days: Optional[str] = "Mon - Sat"
     morning: Optional[str] = "09:00 AM - 01:00 PM"
@@ -114,20 +117,28 @@ class PlanVerifyPayload(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
 
+class PlanCheckoutPayload(BaseModel):
+    years: Optional[int] = 1
+
 @router.post("/plan/checkout")
-async def create_plan_checkout(request: Request):
+async def create_plan_checkout(payload: PlanCheckoutPayload, request: Request):
     user = await get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="unauthorized")
     if user.get("role") not in ["provider", "admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="provider role required")
 
+    years = payload.years if payload.years in (1, 2, 3) else 1
+
     db = get_db()
     gw = await db.system_settings.find_one({"key": "payment_gateway_config"})
     if not gw or not gw.get("enabled") or not gw.get("keyId") or not gw.get("keySecret"):
         raise HTTPException(status_code=400, detail="Payment gateway is not configured. Ask admin to set it up under Admin Console > Payment Gateway.")
 
-    amount_inr = int(gw.get("premiumAmount") or 499)
+    monthly_inr = int(gw.get("premiumAmount") or 499)
+    base_inr = monthly_inr * 12 * years
+    discount_pct = PLAN_DISCOUNT_PCT.get(years, 0)
+    amount_inr = round(base_inr * (100 - discount_pct) / 100)
     amount_paise = amount_inr * 100
 
     try:
@@ -139,7 +150,7 @@ async def create_plan_checkout(request: Request):
                     "amount": amount_paise,
                     "currency": "INR",
                     "receipt": f"premium_{user['id']}_{int(datetime.utcnow().timestamp())}",
-                    "notes": {"ownerId": user["id"], "plan": "premium"},
+                    "notes": {"ownerId": user["id"], "plan": "premium", "years": str(years)},
                 },
             )
     except Exception:
@@ -155,7 +166,10 @@ async def create_plan_checkout(request: Request):
         "ownerId": user["id"],
         "ownerName": user.get("name", ""),
         "plan": "premium",
+        "planYears": years,
         "amount": amount_inr,
+        "baseAmount": base_inr,
+        "discountPct": discount_pct,
         "currency": "INR",
         "razorpayOrderId": order["id"],
         "status": "created",
@@ -163,6 +177,7 @@ async def create_plan_checkout(request: Request):
     }
     await db.billing_transactions.insert_one(txn)
 
+    duration_label = "1 Year" if years == 1 else f"{years} Years"
     return {
         "ok": True,
         "orderId": order["id"],
@@ -170,7 +185,7 @@ async def create_plan_checkout(request: Request):
         "currency": "INR",
         "keyId": gw["keyId"],
         "name": "Search2Service Premium",
-        "description": "Premium Provider Plan — Monthly",
+        "description": f"Premium Provider Plan — {duration_label}",
     }
 
 @router.post("/plan/verify")

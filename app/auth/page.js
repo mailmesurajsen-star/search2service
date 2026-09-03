@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Lock, User, Phone, LogIn, UserPlus, Loader2, ShieldAlert, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, LogIn, UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import { SiteHeader } from '@/components/site-header';
@@ -99,10 +99,6 @@ function AuthInner() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                </div>
-                <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-2.5 flex gap-2">
-                  <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <div><b>Demo admin:</b> admin@search2service.in / admin123</div>
                 </div>
                 <Button disabled={busy} onClick={submit} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><LogIn className="w-4 h-4 mr-1.5" />Sign In</>}

@@ -1192,8 +1192,8 @@ function AdminDashboardContent() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-accent grid place-items-center text-white font-black text-sm shadow-md shadow-accent/20">
-                S2
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-accent grid place-items-center text-white shadow-md shadow-accent/20">
+                <Search className="w-5 h-5" />
               </div>
               <span className="font-extrabold text-lg tracking-tight text-foreground">
                 Admin Console

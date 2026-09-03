@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Search } from 'lucide-react';
 
 const COMPANY_LINKS = [
   { label: 'About Us', href: '/about' },
@@ -21,7 +22,7 @@ export function SiteFooter() {
         <div className="grid md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-bold border border-white/15">S2</div>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white border border-white/15"><Search className="w-5 h-5" /></div>
               <div className="font-bold text-white text-lg">Search2Service</div>
             </div>
             <p className="text-sm text-white/60">One platform for every service. Trusted by thousands of businesses and customers across India.</p>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/use-auth';
-import { Landmark } from 'lucide-react';
+import { Landmark, Search } from 'lucide-react';
 
 export function SiteHeader() {
   const { user, logout } = useAuth();
@@ -13,8 +13,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 backdrop-blur bg-white/85 border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white font-extrabold text-sm shadow-sm">
-            S2
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent grid place-items-center text-white shadow-sm">
+            <Search className="w-5 h-5" />
           </div>
           <span className="font-extrabold text-lg leading-none tracking-tight text-foreground">Search2Service</span>
         </Link>

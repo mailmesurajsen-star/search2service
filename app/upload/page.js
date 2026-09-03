@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { FileUploader } from '@/components/file-uploader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, UploadCloud, Image as ImageIcon, FileText, Film, Copy, ExternalLink } from 'lucide-react';
+import { ChevronLeft, UploadCloud, Image as ImageIcon, FileText, Film, Copy, ExternalLink, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function UploadDemoPage() {
@@ -29,7 +29,7 @@ export default function UploadDemoPage() {
           <Link href="/" className="flex items-center gap-1 text-sm"><ChevronLeft className="w-4 h-4" />Home</Link>
           <div className="flex-1" />
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-orange-500 grid place-items-center text-white font-bold text-xs">S2</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent grid place-items-center text-white"><Search className="w-4 h-4" /></div>
             <span className="font-bold">Search2Service</span>
           </Link>
         </div>
