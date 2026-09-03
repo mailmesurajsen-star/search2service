@@ -3,13 +3,14 @@
 # Builds and runs BOTH the Next.js frontend and the FastAPI backend in one service.
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip", "gcc"]
+nixPkgs = ["nodejs_20", "python311", "gcc"]
 
 [phases.install]
 cmds = [
   "npm ci",
-  "pip install --break-system-packages --no-cache-dir --upgrade pip",
-  "pip install --break-system-packages --no-cache-dir -r backend/requirements.txt"
+  "python3 -m venv /opt/venv",
+  "/opt/venv/bin/pip install --no-cache-dir --upgrade pip",
+  "/opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt"
 ]
 
 [phases.build]

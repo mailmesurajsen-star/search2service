@@ -39,14 +39,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=frontend-builder /app/.next/standalone ./
 COPY --from=frontend-builder /app/.next/static ./.next/static
 
-# --- Backend (FastAPI) --- installed straight into the system Python: this
-# container only ever runs this one app, so a venv buys nothing but adds a
-# dependency on the `venv` stdlib module being present. --break-system-packages
-# opts out of PEP 668's "externally managed" guard, which Alpine's python3
-# package enables by default.
+# --- Backend (FastAPI) --- installed into a venv. Python's own `ensurepip`
+# bootstraps pip inside it from bundled wheels in the stdlib, so this doesn't
+# depend on the base image's system pip being set up any particular way.
 COPY backend ./backend
-RUN pip install --break-system-packages --no-cache-dir --upgrade pip \
-    && pip install --break-system-packages --no-cache-dir -r backend/requirements.txt
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/venv/bin/pip install --no-cache-dir -r backend/requirements.txt
 
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
