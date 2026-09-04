@@ -10,20 +10,27 @@ This app is two processes behind one nginx reverse proxy:
 Tested against a small VPS (1 vCPU / a few GB RAM — e.g. Hostinger KVM 1) running
 Ubuntu 22.04/24.04. Debian works the same way with minor package-manager differences.
 
-**Two ways to run this on a VPS — pick one:**
+**Three ways to run this on a VPS — pick one:**
 
 1. **Bare metal with systemd + nginx** (steps below) — you SSH in, install Node/Python/nginx
    directly on the OS, and two systemd services run the two processes. Most control,
    no extra abstraction layer.
-2. **One Docker container** — if your VPS/panel supports Docker (or a
-   Nixpacks-based PaaS like Railway/Coolify/Render), use the `Dockerfile` /
-   `nixpacks.toml` at the repo root instead. Both build the frontend and backend
-   together and run them via `start.sh` (backend on internal `127.0.0.1:8000`,
-   frontend on `0.0.0.0:$PORT`, proxying `/api/*` between them — same architecture,
-   just packaged as one container instead of two systemd services). Point the
-   platform's builder at this repo; if it auto-detects Nixpacks, it'll use
-   `nixpacks.toml`, if it builds a Dockerfile, it'll use `Dockerfile` — no other
-   setup needed beyond setting env vars (`JWT_SECRET` is required, same as below).
+2. **One Docker container, platform-managed proxy** — for a Nixpacks/Dockerfile
+   PaaS (Railway, Coolify, Render, or Dokploy's "Application" type) where the
+   platform runs its own reverse proxy (usually Traefik) in front of your
+   container. Point the platform's builder at this repo; if it auto-detects
+   Nixpacks it uses `nixpacks.toml`, if it builds a Dockerfile it uses
+   `Dockerfile` — either way both build the frontend and backend together and
+   run them via `start.sh` (backend on internal `127.0.0.1:8000`, frontend on
+   `0.0.0.0:$PORT`, proxying `/api/*` between them). **Mount a persistent volume
+   at `/app/backend/data`** in the platform's UI (Coolify/Dokploy/Railway all
+   support this for single-app deploys) — without it, every redeploy wipes the
+   SQLite database, since it otherwise lives only in the container's throwaway
+   filesystem.
+3. **Docker Compose with your own nginx** (see below) — for Dokploy's "Compose"
+   application type, or plain `docker compose up -d` on any VPS. Runs the same
+   app container plus an explicit `nginx` service you control, with the database
+   already wired to a named volume.
 
 ## 1. One-time server setup (bare metal path)
 
@@ -152,6 +159,38 @@ ssh-copy-id -i github-actions-deploy.pub deploy@your-server-ip
 
 If you don't want auto-deploy, just delete `.github/workflows/deploy.yml`.
 
+## Option 3: Dokploy (Docker Compose + nginx)
+
+Uses `docker-compose.yml` at the repo root: an `app` service (built from
+`Dockerfile`, running frontend + backend via `start.sh`) plus an `nginx`
+service in front of it, with a named volume so the SQLite database survives
+redeploys.
+
+1. In Dokploy, create a new **Application** with type **Compose**, point it at
+   this GitHub repo, and leave the compose file path as `docker-compose.yml`.
+2. In the app's **Environment** tab, add at minimum:
+   - `JWT_SECRET` — generate with `openssl rand -hex 32`. The compose file is
+     written so the deploy fails fast with a clear error if this is missing,
+     rather than silently starting insecure.
+   - `CORS_ORIGINS=https://yourdomain.com` (optional — defaults to `*`)
+3. In Dokploy's **Domains** section for this app, point your domain at the
+   `nginx` service, port `80`. Dokploy's own Traefik handles SSL (Let's
+   Encrypt) automatically once the domain resolves to the VPS — the `nginx`
+   service itself only serves plain HTTP internally (see
+   `deploy/nginx-docker.conf`), it doesn't need its own certificates.
+4. Deploy. Dokploy builds the `app` image from `Dockerfile`, pulls
+   `nginx:alpine` for the proxy, and starts both.
+5. **Redeploying**: push to `main` and hit Deploy in Dokploy (or enable
+   Dokploy's auto-deploy webhook) — `app_data` is a named volume, so the
+   database persists across rebuilds.
+
+Running this locally / on any plain VPS without Dokploy works the same way:
+
+```bash
+cp .env.example .env   # fill in JWT_SECRET at minimum
+docker compose up -d --build
+```
+
 ## Notes
 
 - **Database**: SQLite by default at `backend/data/search2service.db` — it is
@@ -160,10 +199,12 @@ If you don't want auto-deploy, just delete `.github/workflows/deploy.yml`.
   since it's the only copy of your data. To use MySQL instead, set `DB_ENGINE=mysql`
   and the `MYSQL_*` vars in `.env`.
 - **File uploads** (provider banners, gallery photos, résumés) are stored inside
-  the same SQLite database as blobs — no separate uploads directory to worry about
-  or lose on redeploy.
-- **Ports**: backend on `127.0.0.1:8000`, frontend on `127.0.0.1:3000` — neither is
-  exposed to the internet directly; only nginx (80/443) is public.
+  the same SQLite database as blobs — no separate uploads directory to worry about,
+  just the one database file/volume to persist and back up.
+- **Ports**: backend on `127.0.0.1:8000`, frontend on `127.0.0.1:3000` (or
+  `$PORT` in the Docker paths) — neither is exposed to the internet directly;
+  only nginx (bare metal) or the `nginx` compose service / platform's Traefik
+  (Docker paths) is public.
 - **Scaling**: a KVM-1-class VPS is fine for low-moderate traffic with the default
   single-process setup. If you outgrow it, the first lever is usually adding
   `--workers N` to the uvicorn backend (note: SQLite doesn't love high write
