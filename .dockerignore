@@ -1,4 +1,5 @@
 node_modules
+RUN apk update && apk add --no-cache bash
 .next
 .git
 .gitignore
