@@ -15,12 +15,13 @@ Ubuntu 22.04/24.04. Debian works the same way with minor package-manager differe
 1. **Bare metal with systemd + nginx** (steps below) — you SSH in, install Node/Python/nginx
    directly on the OS, and two systemd services run the two processes. Most control,
    no extra abstraction layer.
-2. **One Docker container, platform-managed proxy** — for a Dockerfile-based
+2. **One Docker container, platform-managed proxy** — for a Nixpacks/Dockerfile
    PaaS (Railway, Coolify, Render, or Dokploy's "Application" type) where the
    platform runs its own reverse proxy (usually Traefik) in front of your
-   container. Point the platform's builder at this repo — it builds
-   `Dockerfile`, which builds the frontend and backend together and runs them
-   via `start.sh` (backend on internal `127.0.0.1:8000`, frontend on
+   container. Point the platform's builder at this repo; if it auto-detects
+   Nixpacks it uses `nixpacks.toml`, if it builds a Dockerfile it uses
+   `Dockerfile` — either way both build the frontend and backend together and
+   run them via `start.sh` (backend on internal `127.0.0.1:8000`, frontend on
    `0.0.0.0:$PORT`, proxying `/api/*` between them). **Mount a persistent volume
    at `/app/backend/data`** in the platform's UI (Coolify/Dokploy/Railway all
    support this for single-app deploys) — without it, every redeploy wipes the
