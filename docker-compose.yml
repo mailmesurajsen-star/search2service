@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Search2Service — for Dokploy "Compose" deployments (or plain `docker compose up`
 # on any VPS). One app container (Next.js frontend + FastAPI backend, started
 # together by start.sh) behind an nginx reverse proxy.

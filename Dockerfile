@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Search2Service — single-container image running both the Next.js frontend
 # (standalone build) and the FastAPI backend, started together by start.sh.
 # Only the frontend's port is meant to be published; the backend stays on
@@ -9,9 +10,13 @@
 # layer pulls can time out mid-transfer.
 
 # ---------- Stage 1: build the Next.js frontend ----------
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
+# Force full installs (incl. devDependencies — needed for `next build`'s
+# tailwindcss/postcss) regardless of any NODE_ENV=production the platform
+# might inject as a build arg/env before this point.
+ENV NPM_CONFIG_PRODUCTION=false
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
@@ -19,10 +24,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # BACKEND_URL must be present at build time too — next.config.js reads it inside
 # rewrites() to decide how /api/* gets proxied to the backend.
 ENV BACKEND_URL=http://127.0.0.1:8000
-RUN npm run build && cp -r .next/static .next/standalone/.next/static
+# Cache mount persists Next.js's incremental build cache across image builds
+# (BuildKit-only feature — this is what the "No build cache found" notice is
+# about; harmless without it, just slower rebuilds).
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build && cp -r .next/static .next/standalone/.next/static
 
 # ---------- Stage 2: runtime image — Node (frontend) + Python (backend) ----------
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 # libc6-compat: Next.js standalone's native addons need it at runtime on Alpine,
