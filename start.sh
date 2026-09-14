@@ -6,6 +6,10 @@ set -e
 
 export ENVIRONMENT="${ENVIRONMENT:-production}"
 export BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:8000}"
+# Unbuffered stdout so backend logs (including DB persistence diagnostics)
+# appear immediately in the platform's log viewer instead of sitting in a
+# buffer until it fills up.
+export PYTHONUNBUFFERED=1
 
 echo "==> Starting backend (uvicorn) on 127.0.0.1:8000"
 HOST=127.0.0.1 PORT=8000 /opt/venv/bin/python backend/run.py &

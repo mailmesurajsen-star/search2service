@@ -57,14 +57,13 @@ async def register(payload: RegisterPayload, response: Response):
     }
     
     await db.users.insert_one(user_doc)
-    
-    token = sign_token({"uid": user_doc["id"], "role": user_doc["role"], "email": user_doc["email"]})
-    set_auth_cookie(response, token)
-    
+
+    # Registration does not auto-authenticate — no auth cookie is set here.
+    # The user must explicitly call /api/auth/login with their new credentials.
     safe_user = clean_doc(user_doc)
     safe_user.pop("passwordHash", None)
-    
-    return {"ok": True, "user": safe_user, "token": token}
+
+    return {"ok": True, "user": safe_user}
 
 @router.post("/login")
 async def login(payload: LoginPayload, response: Response):

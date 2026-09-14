@@ -15,18 +15,18 @@ Ubuntu 22.04/24.04. Debian works the same way with minor package-manager differe
 1. **Bare metal with systemd + nginx** (steps below) — you SSH in, install Node/Python/nginx
    directly on the OS, and two systemd services run the two processes. Most control,
    no extra abstraction layer.
-2. **One Docker container, platform-managed proxy** — for a Nixpacks/Dockerfile
-   PaaS (Railway, Coolify, Render, or Dokploy's "Application" type) where the
-   platform runs its own reverse proxy (usually Traefik) in front of your
-   container. Point the platform's builder at this repo; if it auto-detects
-   Nixpacks it uses `nixpacks.toml`, if it builds a Dockerfile it uses
-   `Dockerfile` — either way both build the frontend and backend together and
-   run them via `start.sh` (backend on internal `127.0.0.1:8000`, frontend on
-   `0.0.0.0:$PORT`, proxying `/api/*` between them). **Mount a persistent volume
-   at `/app/backend/data`** in the platform's UI (Coolify/Dokploy/Railway all
-   support this for single-app deploys) — without it, every redeploy wipes the
-   SQLite database, since it otherwise lives only in the container's throwaway
-   filesystem.
+2. **One Docker container, platform-managed proxy** (see Option 2 below) — for
+   a Nixpacks/Dockerfile PaaS (Railway, Coolify, Render, or Dokploy's
+   "Application" type) where the platform runs its own reverse proxy (usually
+   Traefik) in front of your container. Point the platform's builder at this
+   repo; if it auto-detects Nixpacks it uses `nixpacks.toml`, if it builds a
+   Dockerfile it uses `Dockerfile` — either way both build the frontend and
+   backend together and run them via `start.sh` (backend on internal
+   `127.0.0.1:8000`, frontend on `0.0.0.0:$PORT`, proxying `/api/*` between
+   them). **Mount a persistent volume at `/app/backend/data`** in the
+   platform's UI (Coolify/Dokploy/Railway all support this for single-app
+   deploys) — without it, every redeploy wipes the SQLite database, since it
+   otherwise lives only in the container's throwaway filesystem.
 3. **Docker Compose with your own nginx** (see below) — for Dokploy's "Compose"
    application type, or plain `docker compose up -d` on any VPS. Runs the same
    app container plus an explicit `nginx` service you control, with the database
@@ -158,6 +158,40 @@ ssh-copy-id -i github-actions-deploy.pub deploy@your-server-ip
 ```
 
 If you don't want auto-deploy, just delete `.github/workflows/deploy.yml`.
+
+## Option 2: Dokploy (Application type — Nixpacks or Dockerfile, single container)
+
+This is the deployment type to use when you point Dokploy's **Application**
+(not **Compose**) creator at this repo. Dokploy runs its own Traefik proxy in
+front of your one container, so there's no separate nginx service to manage —
+but that also means **you must manually add a persistent volume mount**,
+otherwise every redeploy gives the container a brand-new empty filesystem and
+your SQLite database (and every upload stored inside it) is gone.
+
+1. In Dokploy, create a new **Application**, point it at this GitHub repo.
+   Dokploy auto-detects either Nixpacks (`nixpacks.toml`) or a Dockerfile
+   build — either is fine, both start the app the same way via `start.sh`.
+2. In the app's **Environment** tab, add at minimum:
+   - `JWT_SECRET` — generate with `openssl rand -hex 32`.
+   - `NEXT_PUBLIC_SITE_URL=https://yourdomain.com`
+   - `CORS_ORIGINS=https://yourdomain.com` (optional — defaults to `*`)
+3. **This is the step that fixes "data resets on every deploy":** open the
+   app's **Advanced** tab → **Volumes** (sometimes labeled **Mounts**) → **Add
+   Volume**, and set:
+   - **Mount type**: Volume (a Dokploy/Docker-managed named volume — simplest;
+     "Bind" to a host path works too if you'd rather browse the files directly
+     from the VPS filesystem)
+   - **Mount path (container path)**: `/app/backend/data`
+   - Save, then redeploy once so the mount takes effect.
+4. In Dokploy's **Domains** tab, point your domain at this application's
+   internal port `3000`. Dokploy/Traefik handles SSL automatically.
+5. Deploy. **To confirm persistence is actually working**, check the app's
+   Logs tab right after a redeploy — the backend now prints one of:
+   - `[DB] Using EXISTING SQLite database at ... — persistence OK` — good,
+     the volume is wired correctly.
+   - `[DB] Created a NEW/EMPTY SQLite database at ...` with a WARNING — the
+     volume from step 3 isn't actually mounted at `/app/backend/data`; re-check
+     the mount path for typos and that it was saved before this deploy.
 
 ## Option 3: Dokploy (Docker Compose + nginx)
 

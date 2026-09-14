@@ -11,6 +11,7 @@ Documents are stored as JSON blobs — this keeps every route file that talks to
 sorting and pagination are applied in Python against the decoded documents,
 which is simple, dialect-agnostic, and fast enough at this app's data volumes.
 """
+import os
 import re
 import json
 from types import SimpleNamespace
@@ -407,9 +408,23 @@ async def init_db():
             engine = SQLiteEngine(SQLITE_PATH)
             await engine.connect()
     else:
+        # Log whether the DB file already existed *before* connecting (aiosqlite
+        # creates the file on connect, so this has to be checked first) — this is
+        # the single most useful line for diagnosing "data resets on every deploy":
+        # if it prints "NEW/EMPTY" on every redeploy, the volume mounted at
+        # SQLITE_PATH's directory isn't actually persisting across deploys.
+        db_file_existed = os.path.exists(SQLITE_PATH)
         engine = SQLiteEngine(SQLITE_PATH)
         await engine.connect()
-        print(f"[DB] Using local SQLite database at {SQLITE_PATH}")
+        abs_path = os.path.abspath(SQLITE_PATH)
+        if db_file_existed:
+            size_kb = os.path.getsize(SQLITE_PATH) / 1024
+            print(f"[DB] Using EXISTING SQLite database at {abs_path} ({size_kb:.1f} KB) - persistence OK")
+        else:
+            print(f"[DB] Created a NEW/EMPTY SQLite database at {abs_path}")
+            print(f"[DB] WARNING: no existing database file was found at this path on startup.")
+            print(f"[DB] If you expected existing data, the volume mounted at this path's")
+            print(f"[DB] directory is NOT persisting across deploys - see DEPLOYMENT.md.")
 
     for table in COLLECTIONS:
         await engine.ensure_table(table)

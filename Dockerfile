@@ -66,5 +66,12 @@ ENV ENVIRONMENT=production
 ENV DB_ENGINE=sqlite
 ENV SQLITE_PATH=/app/backend/data/search2service.db
 
+# The SQLite database (and uploaded files, stored as blobs inside it) live here.
+# This directory MUST be mounted to a persistent volume in your platform's UI
+# (Dokploy/Coolify/Railway "Volumes"/"Mounts" tab) — without an explicit mount,
+# most platforms recreate the container's writable filesystem on every deploy,
+# silently wiping this directory. See DEPLOYMENT.md.
+VOLUME ["/app/backend/data"]
+
 EXPOSE 3000
 CMD ["./start.sh"]

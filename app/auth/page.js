@@ -18,6 +18,11 @@ const REGISTER_ROLES = [
   { key: 'jobseeker', label: 'Job Seeker (Find Work)' },
 ];
 
+// Kept as separate named constants (not a shared/ternary URL) so the Login and
+// Register requests can never accidentally cross-reference each other's endpoint.
+const LOGIN_API = '/api/auth/login';
+const REGISTER_API = '/api/auth/register';
+
 function AuthInner() {
   const router = useRouter();
   const sp = useSearchParams();
@@ -28,28 +33,46 @@ function AuthInner() {
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const submit = async () => {
+  // After a successful login OR register, land the user on the right page.
+  const afterAuth = async (d) => {
+    await refresh();
+    // Admin/super_admin always land in the Admin Console — a stale `next` param from
+    // bouncing off a provider/customer/jobseeker page should never hijack an admin login.
+    const next = (d.user.role === 'admin' || d.user.role === 'super_admin')
+      ? '/admin/dashboard'
+      : sp.get('next') || (
+          d.user.role === 'provider' ? (d.user.plan ? '/provider/dashboard' : '/provider/plan') :
+          d.user.role === 'jobseeker' ? '/jobseeker/profile' :
+          '/customer/dashboard'
+        );
+    router.push(next);
+  };
+
+  const submitLogin = async () => {
     setBusy(true);
     try {
-      const url = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const body = mode === 'login'
-        ? { email: form.email, password: form.password }
-        : { name: form.name, email: form.email, phone: form.phone, password: form.password, role };
-      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const body = { email: form.email, password: form.password };
+      const r = await fetch(LOGIN_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || 'Failed');
-      toast.success(mode === 'login' ? `Welcome back, ${d.user.name}!` : `Welcome to Search2Service, ${d.user.name}!`);
-      await refresh();
-      // Admin/super_admin always land in the Admin Console — a stale `next` param from
-      // bouncing off a provider/customer/jobseeker page should never hijack an admin login.
-      const next = (d.user.role === 'admin' || d.user.role === 'super_admin')
-        ? '/admin/dashboard'
-        : sp.get('next') || (
-            d.user.role === 'provider' ? (d.user.plan ? '/provider/dashboard' : '/provider/plan') :
-            d.user.role === 'jobseeker' ? '/jobseeker/profile' :
-            '/customer/dashboard'
-          );
-      router.push(next);
+      toast.success(`Welcome back, ${d.user.name}!`);
+      await afterAuth(d);
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const submitRegister = async () => {
+    setBusy(true);
+    try {
+      const body = { name: form.name, email: form.email, phone: form.phone, password: form.password, role };
+      const r = await fetch(REGISTER_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Failed');
+      // Registration does not auto-login — send the user to the Login tab to
+      // authorize with their new credentials via the separate Login API.
+      toast.success('Account created! Please login to continue.');
+      setForm(f => ({ ...f, password: '' }));
+      setMode('login');
     } catch (e) { toast.error(e.message); }
     finally { setBusy(false); }
   };
@@ -94,13 +117,13 @@ function AuthInner() {
                   <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Password</Label>
                   <div className="relative mt-1.5">
                     <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="pl-9 pr-9 focus-visible:ring-accent" type={showPassword ? 'text' : 'password'} placeholder="••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === 'Enter' && submit()} />
+                    <Input className="pl-9 pr-9 focus-visible:ring-accent" type={showPassword ? 'text' : 'password'} placeholder="••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === 'Enter' && submitLogin()} />
                     <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-                <Button disabled={busy} onClick={submit} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Button disabled={busy} onClick={submitLogin} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><LogIn className="w-4 h-4 mr-1.5" />Sign In</>}
                 </Button>
               </div>
@@ -140,13 +163,13 @@ function AuthInner() {
                   <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Password</Label>
                   <div className="relative mt-1.5">
                     <Lock className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="pl-9 pr-9 focus-visible:ring-accent" type={showPassword ? 'text' : 'password'} placeholder="At least 6 characters" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === 'Enter' && submit()} />
+                    <Input className="pl-9 pr-9 focus-visible:ring-accent" type={showPassword ? 'text' : 'password'} placeholder="At least 6 characters" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} onKeyDown={e => e.key === 'Enter' && submitRegister()} />
                     <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" tabIndex={-1}>
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
-                <Button disabled={busy} onClick={submit} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Button disabled={busy} onClick={submitRegister} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserPlus className="w-4 h-4 mr-1.5" />Create Account</>}
                 </Button>
               </div>
