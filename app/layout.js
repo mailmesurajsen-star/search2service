@@ -5,7 +5,7 @@ import { AuthProvider } from '@/lib/use-auth';
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], display: 'swap', variable: '--font-jakarta' });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://search2service.cloud';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://search2service.com';
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
@@ -13,13 +13,22 @@ export const metadata = {
     default: 'Search2Service — One Platform for Every Service',
     template: '%s | Search2Service',
   },
-  description: 'Find trusted local services in India — doctors, home services, hotels, jobs, government services and more. All in one place.',
-  keywords: 'search2service, local services india, find doctor, home services, urban company, justdial, practo',
+  description: 'Search2Service is India\'s all-in-one local services marketplace — find verified doctors, home & repair services, hotels, restaurants, jobs, government services, real estate, education and more near you.',
+  keywords: [
+    'search2service', 'local services india', 'find doctor near me', 'book doctor appointment online',
+    'home services india', 'electrician near me', 'plumber near me', 'ac repair service',
+    'beauty parlour near me', 'salon booking', 'hotel booking india', 'restaurant near me',
+    'wedding photographer', 'event planner india', 'tailor near me', 'printing services',
+    'jobs near me', 'job vacancies india', 'real estate agent', 'property near me',
+    'cab and travel booking', 'pet services india', 'government services online',
+    'legal and finance services', 'verified service providers india', 'local business directory india',
+    'urban company', 'justdial', 'practo', 'sulekha',
+  ].join(', '),
   alternates: { canonical: '/' },
   robots: { index: true, follow: true },
   openGraph: {
     title: 'Search2Service — One Platform for Every Service',
-    description: 'Find trusted local services in India — all in one place.',
+    description: 'India\'s all-in-one local services marketplace — verified doctors, home services, hotels, jobs, government services and more near you.',
     url: SITE_URL,
     siteName: 'Search2Service',
     type: 'website',

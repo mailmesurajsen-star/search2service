@@ -1,4 +1,4 @@
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://search2service.cloud';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://search2service.com';
 
 const STATIC_ROUTES = [
   { path: '/', priority: 1.0, changeFrequency: 'daily' },
