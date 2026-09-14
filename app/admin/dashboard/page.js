@@ -18,7 +18,8 @@ import {
   SlidersHorizontal, ChevronRight, ArrowLeft, Sparkles, ArrowUp, ArrowDown, ExternalLink,
   Image as ImageIcon, ToggleLeft, ToggleRight, Play, LayoutTemplate,
   Megaphone, BadgePercent, Radio, MousePointerClick, Flame, Copy, CalendarDays,
-  Target, BarChart3, Layers3, Landmark, CreditCard, Wallet, KeyRound, IndianRupee, Crown, Smartphone
+  Target, BarChart3, Layers3, Landmark, CreditCard, Wallet, KeyRound, IndianRupee, Crown, Smartphone,
+  Facebook, Instagram, Twitter, Youtube, Linkedin, Share2
 } from 'lucide-react';
 
 const PRESET_IMAGES = [
@@ -37,6 +38,15 @@ const GRADIENT_PRESETS = [
   { label: 'Deep Indigo', value: 'from-slate-950/40 via-indigo-950/40 to-blue-900/40', bg: 'bg-gradient-to-r from-slate-950 via-indigo-900 to-blue-800' },
   { label: 'Purple Velvet', value: 'from-indigo-950/40 via-purple-950/40 to-slate-950/40', bg: 'bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900' },
   { label: 'Emerald Teal', value: 'from-slate-950/40 via-emerald-950/40 to-teal-950/40', bg: 'bg-gradient-to-r from-slate-950 via-emerald-900 to-teal-800' },
+];
+
+const SOCIAL_PLATFORMS = [
+  { key: 'facebook', label: 'Facebook', Icon: Facebook, urlField: 'facebookUrl', iconField: 'facebookIcon', placeholder: 'https://facebook.com/search2service' },
+  { key: 'instagram', label: 'Instagram', Icon: Instagram, urlField: 'instagramUrl', iconField: 'instagramIcon', placeholder: 'https://instagram.com/search2service' },
+  { key: 'twitter', label: 'Twitter / X', Icon: Twitter, urlField: 'twitterUrl', iconField: 'twitterIcon', placeholder: 'https://x.com/search2service' },
+  { key: 'youtube', label: 'YouTube', Icon: Youtube, urlField: 'youtubeUrl', iconField: 'youtubeIcon', placeholder: 'https://youtube.com/@search2service' },
+  { key: 'linkedin', label: 'LinkedIn', Icon: Linkedin, urlField: 'linkedinUrl', iconField: 'linkedinIcon', placeholder: 'https://linkedin.com/company/search2service' },
+  { key: 'whatsapp', label: 'WhatsApp Number', Icon: Phone, urlField: 'whatsappNumber', iconField: 'whatsappIcon', placeholder: '+919876543210' },
 ];
 
 const PLACEMENT_OPTIONS = [
@@ -211,7 +221,19 @@ function AdminDashboardContent() {
     noticeActive: true,
     maintenanceMode: false,
     playStoreUrl: '',
-    appStoreUrl: ''
+    appStoreUrl: '',
+    facebookUrl: '',
+    instagramUrl: '',
+    twitterUrl: '',
+    youtubeUrl: '',
+    linkedinUrl: '',
+    whatsappNumber: '',
+    facebookIcon: '',
+    instagramIcon: '',
+    twitterIcon: '',
+    youtubeIcon: '',
+    linkedinIcon: '',
+    whatsappIcon: ''
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState('');
@@ -2325,6 +2347,75 @@ function AdminDashboardContent() {
                       className="bg-background border-border text-xs text-white"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <Share2 className="w-3.5 h-3.5" /> Social Media Links
+                </label>
+                <p className="text-[11px] text-muted-foreground mb-3">Shown as icons in the website footer. Leave the link blank to hide an icon. Optionally upload a custom icon image to replace the default one.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {SOCIAL_PLATFORMS.map(({ key, label, Icon, urlField, iconField, placeholder }) => (
+                    <div key={key} className="bg-background/60 border border-border rounded-xl p-3 space-y-2">
+                      <label className="block text-[11px] text-muted-foreground mb-1 flex items-center gap-1"><Icon className="w-3 h-3" /> {label}</label>
+                      <Input
+                        value={settings[urlField]}
+                        onChange={(e) => setSettings({ ...settings, [urlField]: e.target.value })}
+                        placeholder={placeholder}
+                        className="bg-background border-border text-xs text-white"
+                      />
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 border border-border grid place-items-center overflow-hidden shrink-0">
+                          {settings[iconField] ? (
+                            <img src={settings[iconField]} alt={`${label} icon`} className="w-full h-full object-cover" />
+                          ) : (
+                            <Icon className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <label className="flex-1 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const body = new FormData();
+                              body.append('file', file);
+                              body.append('context', 'social-icon');
+                              body.append('ownerId', user?.id || 'admin');
+                              try {
+                                const res = await fetch('/api/uploads', { method: 'POST', body });
+                                const data = await res.json();
+                                if (res.ok && data.url) {
+                                  setSettings((prev) => ({ ...prev, [iconField]: data.url }));
+                                  toast.success(`${label} icon uploaded`);
+                                } else {
+                                  toast.error(data.error || 'Icon upload failed');
+                                }
+                              } catch {
+                                toast.error('Icon upload failed');
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                          <span className="text-[11px] text-accent hover:underline">
+                            {settings[iconField] ? 'Change icon' : 'Upload custom icon'}
+                          </span>
+                        </label>
+                        {settings[iconField] && (
+                          <button
+                            type="button"
+                            onClick={() => setSettings((prev) => ({ ...prev, [iconField]: '' }))}
+                            className="text-[11px] text-red-400 hover:underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

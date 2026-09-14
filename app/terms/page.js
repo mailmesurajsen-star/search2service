@@ -1,6 +1,6 @@
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-export const metadata = { title: 'Terms & Conditions — Search2Service' };
+export const metadata = { title: 'Terms & Conditions', description: 'Terms and conditions for using the Search2Service platform.' };
 
 export default function TermsPage() {
   return (

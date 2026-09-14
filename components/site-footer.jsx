@@ -1,5 +1,8 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
+import { Search, Facebook, Instagram, Twitter, Youtube, Linkedin, Phone } from 'lucide-react';
 
 const COMPANY_LINKS = [
   { label: 'About Us', href: '/about' },
@@ -16,6 +19,42 @@ const LEGAL_LINKS = [
 ];
 
 export function SiteFooter() {
+  const [social, setSocial] = useState({
+    facebookUrl: '', instagramUrl: '', twitterUrl: '', youtubeUrl: '', linkedinUrl: '', whatsappNumber: '',
+    facebookIcon: '', instagramIcon: '', twitterIcon: '', youtubeIcon: '', linkedinIcon: '', whatsappIcon: '',
+  });
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        setSocial({
+          facebookUrl: data?.facebookUrl || '',
+          instagramUrl: data?.instagramUrl || '',
+          twitterUrl: data?.twitterUrl || '',
+          youtubeUrl: data?.youtubeUrl || '',
+          linkedinUrl: data?.linkedinUrl || '',
+          whatsappNumber: data?.whatsappNumber || '',
+          facebookIcon: data?.facebookIcon || '',
+          instagramIcon: data?.instagramIcon || '',
+          twitterIcon: data?.twitterIcon || '',
+          youtubeIcon: data?.youtubeIcon || '',
+          linkedinIcon: data?.linkedinIcon || '',
+          whatsappIcon: data?.whatsappIcon || '',
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  const socialIcons = [
+    { key: 'facebookUrl', Icon: Facebook, href: social.facebookUrl, label: 'Facebook', customIcon: social.facebookIcon },
+    { key: 'instagramUrl', Icon: Instagram, href: social.instagramUrl, label: 'Instagram', customIcon: social.instagramIcon },
+    { key: 'twitterUrl', Icon: Twitter, href: social.twitterUrl, label: 'Twitter / X', customIcon: social.twitterIcon },
+    { key: 'youtubeUrl', Icon: Youtube, href: social.youtubeUrl, label: 'YouTube', customIcon: social.youtubeIcon },
+    { key: 'linkedinUrl', Icon: Linkedin, href: social.linkedinUrl, label: 'LinkedIn', customIcon: social.linkedinIcon },
+    { key: 'whatsappNumber', Icon: Phone, href: social.whatsappNumber ? `https://wa.me/${social.whatsappNumber.replace(/[^0-9]/g, '')}` : '', label: 'WhatsApp', customIcon: social.whatsappIcon },
+  ].filter((s) => s.href);
+
   return (
     <footer className="bg-primary text-white/70 pt-16 pb-8">
       <div className="container mx-auto px-4">
@@ -52,7 +91,27 @@ export function SiteFooter() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 mt-10 pt-6 text-sm text-white/50 flex flex-col md:flex-row justify-between gap-2">
+        {socialIcons.length > 0 && (
+          <div className="flex items-center justify-center gap-3 mt-10">
+            {socialIcons.map(({ key, Icon, href, label, customIcon }) => (
+              <a
+                key={key}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="w-9 h-9 rounded-lg bg-white/10 hover:bg-[#5EEAD4] hover:text-primary grid place-items-center text-white/70 transition-colors overflow-hidden"
+              >
+                {customIcon ? (
+                  <img src={customIcon} alt={label} className="w-full h-full object-cover" />
+                ) : (
+                  <Icon className="w-4 h-4" />
+                )}
+              </a>
+            ))}
+          </div>
+        )}
+        <div className="border-t border-white/10 mt-6 pt-6 text-sm text-white/50 flex flex-col md:flex-row justify-between gap-2">
           <div>© {new Date().getFullYear()} Search2Service. All rights reserved.</div>
           <div>Made with ❤️ in India</div>
         </div>

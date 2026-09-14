@@ -2,7 +2,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { Newspaper, Mail, Download, Image as ImageIcon } from 'lucide-react';
 
-export const metadata = { title: 'Press — Search2Service' };
+export const metadata = { title: 'Press', description: 'News, press mentions and media resources for Search2Service.' };
 
 export default function PressPage() {
   return (

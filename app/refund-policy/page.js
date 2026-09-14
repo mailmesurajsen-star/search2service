@@ -1,6 +1,6 @@
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-export const metadata = { title: 'Refund Policy — Search2Service' };
+export const metadata = { title: 'Refund Policy', description: 'Search2Service\'s refund and cancellation policy for provider plans and bookings.' };
 
 export default function RefundPolicyPage() {
   return (

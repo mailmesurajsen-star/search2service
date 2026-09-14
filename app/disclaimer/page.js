@@ -1,6 +1,6 @@
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-export const metadata = { title: 'Disclaimer — Search2Service' };
+export const metadata = { title: 'Disclaimer', description: 'Disclaimer for the use of Search2Service\'s local services marketplace platform.' };
 
 export default function DisclaimerPage() {
   return (

@@ -899,6 +899,18 @@ class AdminSettingsPayload(BaseModel):
     maintenanceMode: Optional[bool] = False
     playStoreUrl: Optional[str] = ""
     appStoreUrl: Optional[str] = ""
+    facebookUrl: Optional[str] = ""
+    instagramUrl: Optional[str] = ""
+    twitterUrl: Optional[str] = ""
+    youtubeUrl: Optional[str] = ""
+    linkedinUrl: Optional[str] = ""
+    whatsappNumber: Optional[str] = ""
+    facebookIcon: Optional[str] = ""
+    instagramIcon: Optional[str] = ""
+    twitterIcon: Optional[str] = ""
+    youtubeIcon: Optional[str] = ""
+    linkedinIcon: Optional[str] = ""
+    whatsappIcon: Optional[str] = ""
 
 @router.get("/settings")
 async def get_admin_settings(request: Request):
@@ -916,7 +928,19 @@ async def get_admin_settings(request: Request):
             "noticeActive": True,
             "maintenanceMode": False,
             "playStoreUrl": "",
-            "appStoreUrl": ""
+            "appStoreUrl": "",
+            "facebookUrl": "",
+            "instagramUrl": "",
+            "twitterUrl": "",
+            "youtubeUrl": "",
+            "linkedinUrl": "",
+            "whatsappNumber": "",
+            "facebookIcon": "",
+            "instagramIcon": "",
+            "twitterIcon": "",
+            "youtubeIcon": "",
+            "linkedinIcon": "",
+            "whatsappIcon": ""
         }
     return {"settings": clean_doc(settings)}
 

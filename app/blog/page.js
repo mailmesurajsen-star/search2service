@@ -2,7 +2,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { CalendarDays, Tag, ArrowRight } from 'lucide-react';
 
-export const metadata = { title: 'Blog — Search2Service' };
+export const metadata = { title: 'Blog', description: 'Tips, guides and updates on finding and booking local services in India — from Search2Service.' };
 
 const POSTS = [
   {

@@ -26,6 +26,18 @@ async def get_public_settings():
         "maintenanceMode": settings.get("maintenanceMode", False),
         "playStoreUrl": settings.get("playStoreUrl", ""),
         "appStoreUrl": settings.get("appStoreUrl", ""),
+        "facebookUrl": settings.get("facebookUrl", ""),
+        "instagramUrl": settings.get("instagramUrl", ""),
+        "twitterUrl": settings.get("twitterUrl", ""),
+        "youtubeUrl": settings.get("youtubeUrl", ""),
+        "linkedinUrl": settings.get("linkedinUrl", ""),
+        "whatsappNumber": settings.get("whatsappNumber", ""),
+        "facebookIcon": settings.get("facebookIcon", ""),
+        "instagramIcon": settings.get("instagramIcon", ""),
+        "twitterIcon": settings.get("twitterIcon", ""),
+        "youtubeIcon": settings.get("youtubeIcon", ""),
+        "linkedinIcon": settings.get("linkedinIcon", ""),
+        "whatsappIcon": settings.get("whatsappIcon", ""),
     }
 
 @router.get("/stats")

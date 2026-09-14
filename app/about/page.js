@@ -2,7 +2,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { ShieldCheck, Users, Building2, MapPin, Target, Heart } from 'lucide-react';
 
-export const metadata = { title: 'About Us — Search2Service' };
+export const metadata = { title: 'About Us', description: 'Learn about Search2Service — India\'s all-in-one platform for finding trusted local services, doctors, home services, and more.' };
 
 const STATS = [
   { icon: Building2, value: '300+', label: 'Verified Providers' },

@@ -3,7 +3,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { LifeBuoy, Phone, Mail, MessageCircle, ChevronRight } from 'lucide-react';
 
-export const metadata = { title: 'Support — Search2Service' };
+export const metadata = { title: 'Support', description: 'Get help with Search2Service — FAQs and support for customers and service providers.' };
 
 const FAQS = [
   {

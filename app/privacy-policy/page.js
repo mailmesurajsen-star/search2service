@@ -1,6 +1,6 @@
 import { LegalPage, LegalSection } from '@/components/legal-page';
 
-export const metadata = { title: 'Privacy Policy — Search2Service' };
+export const metadata = { title: 'Privacy Policy', description: 'How Search2Service collects, uses and protects your personal information.' };
 
 export default function PrivacyPolicyPage() {
   return (

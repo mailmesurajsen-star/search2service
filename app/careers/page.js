@@ -2,7 +2,7 @@ import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { Briefcase, MapPin, Clock, Mail, Sparkles, Users, TrendingUp, HeartHandshake } from 'lucide-react';
 
-export const metadata = { title: 'Careers — Search2Service' };
+export const metadata = { title: 'Careers', description: 'Explore open roles at Search2Service and help build India\'s go-to platform for local services.' };
 
 const OPENINGS = [
   { title: 'Backend Engineer (Python / FastAPI)', type: 'Full-time', location: 'Remote / Lucknow', dept: 'Engineering' },
