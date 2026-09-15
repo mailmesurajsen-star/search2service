@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import { FileUploader } from '@/components/file-uploader';
-import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2, Check } from 'lucide-react';
+import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2, Check, Lock, Crown } from 'lucide-react';
 
 const PAYMENT_METHODS = ['UPI', 'Cash', 'Card', 'Net Banking', 'Razorpay', 'PayTM', 'PhonePe', 'Google Pay'];
 
@@ -132,6 +132,9 @@ export default function BusinessProfilePage() {
   const selectedCat = cats.find(c => c.slug === b.categorySlug);
   const isDoctor = selectedCat && ['Doctor', 'Dentist', 'Eye Specialist', 'Skin Specialist', 'ENT', 'Orthopedic', 'Cardiologist', 'Neurologist', 'Child Specialist', 'Gynecologist', 'Physiotherapist'].includes(selectedCat.name);
 
+  const isPremium = user.plan === 'premium';
+  const galleryLimit = isPremium ? 10 : 1;
+
   if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   return (
@@ -200,9 +203,23 @@ export default function BusinessProfilePage() {
             </div>
           </div>
           <div>
-            <Label>Gallery Photos</Label>
+            <div className="flex items-center justify-between">
+              <Label>Gallery Photos</Label>
+              <span className="text-xs text-muted-foreground">{b.images?.length || 0} / {galleryLimit} {isPremium ? '' : '(Basic plan)'}</span>
+            </div>
             <div className="mt-2">
-              <FileUploader context="provider-gallery" ownerId={user.id} multiple accept="image/jpeg,image/png,image/webp" buttonLabel="Add gallery photos" allowCamera onUploaded={(files) => setB(x => ({ ...x, images: [...(x.images || []), ...(Array.isArray(files) ? files : [files]).map(f => f.url)] }))} />
+              {(b.images?.length || 0) < galleryLimit ? (
+                <FileUploader context="provider-gallery" ownerId={user.id} multiple accept="image/jpeg,image/png,image/webp" buttonLabel="Add gallery photos" allowCamera onUploaded={(files) => setB(x => {
+                  const newUrls = (Array.isArray(files) ? files : [files]).map(f => f.url);
+                  const merged = [...(x.images || []), ...newUrls].slice(0, galleryLimit);
+                  return { ...x, images: merged };
+                })} />
+              ) : !isPremium && (
+                <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                  <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" />Basic plan is limited to {galleryLimit} gallery photo. Upgrade to Premium for up to 10.</span>
+                  <Link href="/provider/plan" className="font-semibold underline whitespace-nowrap">Upgrade</Link>
+                </div>
+              )}
               {b.images?.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
                   {b.images.map((url, i) => (
@@ -328,22 +345,35 @@ export default function BusinessProfilePage() {
         {/* PAYMENT */}
         <Card><CardContent className="p-5 space-y-3">
           <h3 className="font-bold flex items-center gap-2"><CreditCard className="w-4 h-4" />Payment Setup (Your own gateway)</h3>
-          <p className="text-xs text-muted-foreground">Customers will pay you directly using these methods — Search2Service takes no cut.</p>
-          <div>
-            <Label>Accepted Payment Methods</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {PAYMENT_METHODS.map(m => (
-                <button key={m} onClick={() => togglePM(m)} className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${b.paymentMethods.includes(m) ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-border hover:border-accent/40'}`}>
-                  {b.paymentMethods.includes(m) && <Check className="w-3.5 h-3.5" />}{m}
-                </button>
-              ))}
+          {isPremium ? (
+            <>
+              <p className="text-xs text-muted-foreground">Customers will pay you directly using these methods — Search2Service takes no cut.</p>
+              <div>
+                <Label>Accepted Payment Methods</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {PAYMENT_METHODS.map(m => (
+                    <button key={m} onClick={() => togglePM(m)} className={`px-3 py-1.5 rounded-full border text-sm flex items-center gap-1.5 ${b.paymentMethods.includes(m) ? 'bg-primary text-white border-primary' : 'bg-white text-muted-foreground border-border hover:border-accent/40'}`}>
+                      {b.paymentMethods.includes(m) && <Check className="w-3.5 h-3.5" />}{m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div><Label>UPI ID</Label><Input className="mt-1" value={b.upi} onChange={e => setB({ ...b, upi: e.target.value })} placeholder="yourname@paytm" /></div>
+                <div><Label>Razorpay Key ID (optional)</Label><Input className="mt-1" value={b.razorpayKeyId} onChange={e => setB({ ...b, razorpayKeyId: e.target.value })} placeholder="rzp_live_xxxxxxxxxx" /></div>
+              </div>
+              <div className="text-xs text-muted-foreground flex gap-2 items-start"><Wallet className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Your UPI ID is shown on your profile so customers can pay directly. Razorpay Key ID is optional — add it if you want a “Pay Online” button on your booking flow.</span></div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center text-center gap-3 py-8 rounded-lg bg-muted/40 border border-dashed border-border">
+              <div className="w-11 h-11 rounded-full bg-amber-100 text-amber-700 grid place-items-center"><Lock className="w-5 h-5" /></div>
+              <div>
+                <p className="text-sm font-semibold">Payment Setup is a Premium feature</p>
+                <p className="text-xs text-muted-foreground mt-1">Upgrade to accept payments via your own UPI ID or Razorpay account, with no cut taken by Search2Service.</p>
+              </div>
+              <Link href="/provider/plan"><Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1.5"><Crown className="w-4 h-4" />Upgrade to Premium</Button></Link>
             </div>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div><Label>UPI ID</Label><Input className="mt-1" value={b.upi} onChange={e => setB({ ...b, upi: e.target.value })} placeholder="yourname@paytm" /></div>
-            <div><Label>Razorpay Key ID (optional)</Label><Input className="mt-1" value={b.razorpayKeyId} onChange={e => setB({ ...b, razorpayKeyId: e.target.value })} placeholder="rzp_live_xxxxxxxxxx" /></div>
-          </div>
-          <div className="text-xs text-muted-foreground flex gap-2 items-start"><Wallet className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>Your UPI ID is shown on your profile so customers can pay directly. Razorpay Key ID is optional — add it if you want a “Pay Online” button on your booking flow.</span></div>
+          )}
         </CardContent></Card>
 
         {/* JOB PUBLISH */}
@@ -353,30 +383,43 @@ export default function BusinessProfilePage() {
             <p className="text-xs text-muted-foreground mt-0.5">Hiring? Post a job opening — it appears on the Search2Service Jobs page under your business name.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2"><Label>Job Title *</Label><Input className="mt-1" value={newJob.title} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="e.g., Front Desk Executive" /></div>
-            <div>
-              <Label>Job Type</Label>
-              <Select value={newJob.type} onValueChange={v => setNewJob({ ...newJob, type: v })}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Full-time">Full-time</SelectItem>
-                  <SelectItem value="Part-time">Part-time</SelectItem>
-                  <SelectItem value="Contract">Contract</SelectItem>
-                  <SelectItem value="Remote">Remote</SelectItem>
-                </SelectContent>
-              </Select>
+          {isPremium ? (
+            <>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2"><Label>Job Title *</Label><Input className="mt-1" value={newJob.title} onChange={e => setNewJob({ ...newJob, title: e.target.value })} placeholder="e.g., Front Desk Executive" /></div>
+                <div>
+                  <Label>Job Type</Label>
+                  <Select value={newJob.type} onValueChange={v => setNewJob({ ...newJob, type: v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-time">Full-time</SelectItem>
+                      <SelectItem value="Part-time">Part-time</SelectItem>
+                      <SelectItem value="Contract">Contract</SelectItem>
+                      <SelectItem value="Remote">Remote</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Experience Required</Label><Input className="mt-1" value={newJob.experience} onChange={e => setNewJob({ ...newJob, experience: e.target.value })} placeholder="e.g., 1-3 yrs" /></div>
+                <div className="sm:col-span-2"><Label>Salary</Label><Input className="mt-1" value={newJob.salary} onChange={e => setNewJob({ ...newJob, salary: e.target.value })} placeholder="e.g., ₹15,000 - 25,000 / month" /></div>
+                <div className="sm:col-span-2"><Label>Job Description</Label><Textarea className="mt-1" rows={3} value={newJob.description} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Responsibilities, requirements, perks…" /></div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={publishJob} disabled={postingJob} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  {postingJob ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Briefcase className="w-4 h-4 mr-2" />}
+                  {postingJob ? 'Publishing…' : 'Publish Job'}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center text-center gap-3 py-8 rounded-lg bg-muted/40 border border-dashed border-border">
+              <div className="w-11 h-11 rounded-full bg-amber-100 text-amber-700 grid place-items-center"><Lock className="w-5 h-5" /></div>
+              <div>
+                <p className="text-sm font-semibold">Publishing job openings is a Premium feature</p>
+                <p className="text-xs text-muted-foreground mt-1">Upgrade to post job openings — they appear on the Search2Service Jobs page under your business name.</p>
+              </div>
+              <Link href="/provider/plan"><Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white gap-1.5"><Crown className="w-4 h-4" />Upgrade to Premium</Button></Link>
             </div>
-            <div><Label>Experience Required</Label><Input className="mt-1" value={newJob.experience} onChange={e => setNewJob({ ...newJob, experience: e.target.value })} placeholder="e.g., 1-3 yrs" /></div>
-            <div className="sm:col-span-2"><Label>Salary</Label><Input className="mt-1" value={newJob.salary} onChange={e => setNewJob({ ...newJob, salary: e.target.value })} placeholder="e.g., ₹15,000 - 25,000 / month" /></div>
-            <div className="sm:col-span-2"><Label>Job Description</Label><Textarea className="mt-1" rows={3} value={newJob.description} onChange={e => setNewJob({ ...newJob, description: e.target.value })} placeholder="Responsibilities, requirements, perks…" /></div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={publishJob} disabled={postingJob} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-              {postingJob ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Briefcase className="w-4 h-4 mr-2" />}
-              {postingJob ? 'Publishing…' : 'Publish Job'}
-            </Button>
-          </div>
+          )}
 
           {jobs.length > 0 && (
             <div className="pt-3 border-t space-y-2">

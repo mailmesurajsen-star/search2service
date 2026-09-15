@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
-import { ChevronLeft, Check, Crown, Sparkles, Loader2, ShieldCheck, ReceiptText, CheckCircle2, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Check, Crown, Sparkles, Loader2, ShieldCheck, ReceiptText, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 
 const PLANS = [
   {
@@ -18,10 +18,14 @@ const PLANS = [
     color: 'from-slate-600 to-slate-800',
     features: [
       'Business listing in search & category pages',
-      'Up to 4 gallery photos',
+      '1 gallery photo',
       'Standard placement in search results',
       'Booking manager & customer reviews',
       'Standard email support',
+    ],
+    locked: [
+      'Payment Setup (your own gateway)',
+      'Publish job openings',
     ],
   },
   {
@@ -36,7 +40,9 @@ const PLANS = [
       'Everything in Basic, plus:',
       '⭐ PREMIUM badge on your business profile',
       'Priority placement — shown first in search & category results',
-      'Unlimited gallery photos',
+      'Up to 10 gallery photos',
+      'Payment Setup — accept payments via your own UPI/Razorpay',
+      'Publish unlimited job openings',
       'Priority WhatsApp support',
     ],
   },
@@ -253,6 +259,12 @@ export default function ProviderPlanPage() {
                       <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                         <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                         <span>{f}</span>
+                      </li>
+                    ))}
+                    {p.locked?.map((f, i) => (
+                      <li key={`locked-${i}`} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                        <span>{f} <span className="text-[11px]">(Premium only)</span></span>
                       </li>
                     ))}
                   </ul>

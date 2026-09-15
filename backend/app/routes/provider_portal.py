@@ -17,6 +17,13 @@ router = APIRouter(prefix="/api/provider", tags=["provider_portal"])
 # Longer commitment = bigger discount off the plain monthly*12*years rate.
 PLAN_DISCOUNT_PCT = {1: 0, 2: 10, 3: 20}
 
+# Basic (free) plan is capped at 1 gallery photo; Premium gets 10. Providers
+# with no plan set yet are treated as Basic (the most restrictive default).
+GALLERY_PHOTO_LIMITS = {"basic": 1, "premium": 10}
+
+def gallery_photo_limit(plan: Optional[str]) -> int:
+    return GALLERY_PHOTO_LIMITS.get(plan, GALLERY_PHOTO_LIMITS["basic"])
+
 class TimingsModel(BaseModel):
     days: Optional[str] = "Mon - Sat"
     morning: Optional[str] = "09:00 AM - 01:00 PM"
@@ -329,6 +336,26 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
     phone_val = b_dict.get("phone", existing.get("phone", user.get("phone", "")) if existing else user.get("phone", ""))
     whatsapp_val = b_dict.get("whatsapp", existing.get("whatsapp", phone_val) if existing else phone_val)
 
+    # Plan gating only applies to the provider themselves, not an admin editing on
+    # their behalf — admins aren't subject to gallery/payment plan limits.
+    is_gated_provider = user.get("role") == "provider"
+    plan = user.get("plan")
+
+    images_input = b_dict.get("images", existing.get("images", []) if existing else [])
+    if is_gated_provider:
+        images_input = (images_input or [])[:gallery_photo_limit(plan)]
+
+    if is_gated_provider and plan != "premium":
+        # Payment Setup (own gateway) is a Premium feature — Basic providers keep
+        # whatever was already saved (or the defaults), ignoring any new values.
+        upi_val = existing.get("upi", "") if existing else ""
+        razorpay_val = existing.get("razorpayKeyId", "") if existing else ""
+        payment_methods_val = existing.get("paymentMethods", ["UPI", "Cash"]) if existing else ["UPI", "Cash"]
+    else:
+        upi_val = b_dict.get("upi", existing.get("upi", "") if existing else "")
+        razorpay_val = b_dict.get("razorpayKeyId", existing.get("razorpayKeyId", "") if existing else "")
+        payment_methods_val = b_dict.get("paymentMethods", existing.get("paymentMethods", ["UPI", "Cash"]) if existing else ["UPI", "Cash"])
+
     doc = {
         "id": existing.get("id") if existing else str(uuid.uuid4()),
         "ownerId": user["id"],
@@ -353,11 +380,11 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
         "priceTo": parse_int(b_dict.get("priceTo"), existing.get("priceTo", 0) if existing else 0),
         "fees": parse_int(b_dict.get("fees"), existing.get("fees", 0) if existing else 0),
         "offers": [o for o in b_dict.get("offers", existing.get("offers", []) if existing else []) if o][:5],
-        "upi": b_dict.get("upi", existing.get("upi", "") if existing else ""),
-        "razorpayKeyId": b_dict.get("razorpayKeyId", existing.get("razorpayKeyId", "") if existing else ""),
-        "paymentMethods": b_dict.get("paymentMethods", existing.get("paymentMethods", ["UPI", "Cash"]) if existing else ["UPI", "Cash"]),
+        "upi": upi_val,
+        "razorpayKeyId": razorpay_val,
+        "paymentMethods": payment_methods_val,
         "banner": b_dict.get("banner", existing.get("banner", "") if existing else ""),
-        "images": b_dict.get("images", existing.get("images", []) if existing else []),
+        "images": images_input,
         "timings": timings,
         "location": {
             "lat": parse_float(lat),
@@ -588,6 +615,9 @@ async def publish_provider_job(payload: JobPayload, request: Request):
     user = await get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="unauthorized")
+
+    if user.get("role") == "provider" and user.get("plan") != "premium":
+        raise HTTPException(status_code=403, detail="Publishing job openings is a Premium feature. Upgrade your plan to publish jobs.")
 
     if not payload.title or not payload.title.strip():
         raise HTTPException(status_code=400, detail="Job title is required")
