@@ -132,10 +132,10 @@ export default function BusinessProfilePage() {
   const selectedCat = cats.find(c => c.slug === b.categorySlug);
   const isDoctor = selectedCat && ['Doctor', 'Dentist', 'Eye Specialist', 'Skin Specialist', 'ENT', 'Orthopedic', 'Cardiologist', 'Neurologist', 'Child Specialist', 'Gynecologist', 'Physiotherapist'].includes(selectedCat.name);
 
+  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
+
   const isPremium = user.plan === 'premium';
   const galleryLimit = isPremium ? 10 : 1;
-
-  if (loading || !user) return <div className="p-12 text-center text-muted-foreground">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-muted/30">
