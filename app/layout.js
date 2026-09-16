@@ -10,10 +10,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://search2service.com
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Search2Service — One Platform for Every Service',
+    default: 'India Services Marketplace | Search2Service',
     template: '%s | Search2Service',
   },
-  description: 'Search2Service is India\'s all-in-one local services marketplace — find verified doctors, home & repair services, hotels, restaurants, jobs, government services, real estate, education and more near you.',
+  description: 'Find trusted doctors, home services, hotels, restaurants, jobs and government service providers across India with Search2Service.',
   keywords: [
     'search2service', 'local services india', 'find doctor near me', 'book doctor appointment online',
     'home services india', 'electrician near me', 'plumber near me', 'ac repair service',
@@ -27,8 +27,8 @@ export const metadata = {
   alternates: { canonical: '/' },
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'Search2Service — One Platform for Every Service',
-    description: 'India\'s all-in-one local services marketplace — verified doctors, home services, hotels, jobs, government services and more near you.',
+    title: 'India Services Marketplace | Search2Service',
+    description: 'Find trusted doctors, home services, hotels, restaurants, jobs and government service providers across India with Search2Service.',
     url: SITE_URL,
     siteName: 'Search2Service',
     type: 'website',

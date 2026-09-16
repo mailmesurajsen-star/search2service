@@ -1,5 +1,7 @@
 import re
 import uuid
+import json
+import httpx
 from datetime import datetime
 from typing import Optional, List, Any
 from fastapi import APIRouter, Request, HTTPException, Query, status
@@ -1004,6 +1006,145 @@ async def save_payment_gateway(payload: PaymentGatewayPayload, request: Request)
 
     await db.system_settings.update_one({"key": "payment_gateway_config"}, {"$set": doc}, upsert=True)
     return {"ok": True}
+
+# ---------------------------------------------------------
+# MESSAGING GATEWAY — SMS (MSG91) & WhatsApp (Gupshup)
+# ---------------------------------------------------------
+class MessagingGatewayPayload(BaseModel):
+    smsEnabled: Optional[bool] = False
+    msg91AuthKey: Optional[str] = None
+    msg91SenderId: Optional[str] = ""
+    msg91TemplateId: Optional[str] = ""
+    whatsappEnabled: Optional[bool] = False
+    gupshupApiKey: Optional[str] = None
+    gupshupSourceNumber: Optional[str] = ""
+    gupshupAppName: Optional[str] = ""
+
+class MessagingTestPayload(BaseModel):
+    to: str
+    message: Optional[str] = "This is a test message from Search2Service Admin Console."
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return ""
+    return "•" * 8 + value[-4:] if len(value) > 4 else "•" * len(value)
+
+@router.get("/messaging-gateway")
+async def get_messaging_gateway(request: Request):
+    await require_admin(request)
+    db = get_db()
+
+    cfg = await db.system_settings.find_one({"key": "messaging_gateway_config"})
+    if not cfg:
+        cfg = {
+            "smsEnabled": False, "msg91AuthKey": "", "msg91SenderId": "", "msg91TemplateId": "",
+            "whatsappEnabled": False, "gupshupApiKey": "", "gupshupSourceNumber": "", "gupshupAppName": "",
+        }
+
+    safe = clean_doc(cfg)
+    has_msg91_key = bool(safe.get("msg91AuthKey"))
+    has_gupshup_key = bool(safe.get("gupshupApiKey"))
+    if has_msg91_key:
+        safe["msg91AuthKey"] = _mask_secret(safe["msg91AuthKey"])
+    if has_gupshup_key:
+        safe["gupshupApiKey"] = _mask_secret(safe["gupshupApiKey"])
+    safe["hasMsg91Key"] = has_msg91_key
+    safe["hasGupshupKey"] = has_gupshup_key
+    return {"settings": safe}
+
+@router.post("/messaging-gateway")
+async def save_messaging_gateway(payload: MessagingGatewayPayload, request: Request):
+    await require_admin(request)
+    db = get_db()
+
+    existing = await db.system_settings.find_one({"key": "messaging_gateway_config"})
+    doc = {
+        "key": "messaging_gateway_config",
+        "smsEnabled": bool(payload.smsEnabled),
+        "msg91SenderId": payload.msg91SenderId if payload.msg91SenderId is not None else (existing.get("msg91SenderId", "") if existing else ""),
+        "msg91TemplateId": payload.msg91TemplateId if payload.msg91TemplateId is not None else (existing.get("msg91TemplateId", "") if existing else ""),
+        "whatsappEnabled": bool(payload.whatsappEnabled),
+        "gupshupSourceNumber": payload.gupshupSourceNumber if payload.gupshupSourceNumber is not None else (existing.get("gupshupSourceNumber", "") if existing else ""),
+        "gupshupAppName": payload.gupshupAppName if payload.gupshupAppName is not None else (existing.get("gupshupAppName", "") if existing else ""),
+        "updatedAt": datetime.utcnow().isoformat(),
+    }
+    # Only overwrite a secret if the admin actually typed a new one (avoid clobbering with the masked placeholder)
+    if payload.msg91AuthKey and "•" not in payload.msg91AuthKey:
+        doc["msg91AuthKey"] = payload.msg91AuthKey
+    else:
+        doc["msg91AuthKey"] = existing.get("msg91AuthKey", "") if existing else ""
+
+    if payload.gupshupApiKey and "•" not in payload.gupshupApiKey:
+        doc["gupshupApiKey"] = payload.gupshupApiKey
+    else:
+        doc["gupshupApiKey"] = existing.get("gupshupApiKey", "") if existing else ""
+
+    await db.system_settings.update_one({"key": "messaging_gateway_config"}, {"$set": doc}, upsert=True)
+    return {"ok": True}
+
+@router.post("/messaging-gateway/test-sms")
+async def test_sms_gateway(payload: MessagingTestPayload, request: Request):
+    await require_admin(request)
+    db = get_db()
+
+    cfg = await db.system_settings.find_one({"key": "messaging_gateway_config"})
+    if not cfg or not cfg.get("msg91AuthKey"):
+        raise HTTPException(status_code=400, detail="Save your MSG91 Auth Key first")
+
+    mobile = re.sub(r'[^0-9]', '', payload.to)
+    template_id = cfg.get("msg91TemplateId")
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            if template_id:
+                # Modern flow/template-based API — needed for DLT-registered transactional SMS in India.
+                resp = await client.post(
+                    "https://control.msg91.com/api/v5/flow/",
+                    headers={"authkey": cfg["msg91AuthKey"], "Content-Type": "application/json"},
+                    json={"template_id": template_id, "sender": cfg.get("msg91SenderId") or None, "mobiles": mobile},
+                )
+            else:
+                # Legacy simple send — works for accounts without a DLT template configured (e.g. trial accounts).
+                resp = await client.get(
+                    "https://api.msg91.com/api/sendhttp.php",
+                    params={
+                        "authkey": cfg["msg91AuthKey"],
+                        "mobiles": mobile,
+                        "message": payload.message,
+                        "sender": cfg.get("msg91SenderId") or "MSGIND",
+                        "route": "4",
+                        "country": "91",
+                    },
+                )
+        return {"ok": resp.status_code < 400, "status": resp.status_code, "response": resp.text[:500]}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"MSG91 request failed: {e}")
+
+@router.post("/messaging-gateway/test-whatsapp")
+async def test_whatsapp_gateway(payload: MessagingTestPayload, request: Request):
+    await require_admin(request)
+    db = get_db()
+
+    cfg = await db.system_settings.find_one({"key": "messaging_gateway_config"})
+    if not cfg or not cfg.get("gupshupApiKey") or not cfg.get("gupshupSourceNumber"):
+        raise HTTPException(status_code=400, detail="Save your Gupshup API Key and Source Number first")
+
+    mobile = re.sub(r'[^0-9]', '', payload.to)
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "https://api.gupshup.io/wa/api/v1/msg",
+                headers={"apikey": cfg["gupshupApiKey"], "Content-Type": "application/x-www-form-urlencoded"},
+                data={
+                    "channel": "whatsapp",
+                    "source": cfg["gupshupSourceNumber"],
+                    "destination": mobile,
+                    "message": json.dumps({"type": "text", "text": payload.message}),
+                    "src.name": cfg.get("gupshupAppName") or "",
+                },
+            )
+        return {"ok": resp.status_code < 400, "status": resp.status_code, "response": resp.text[:500]}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gupshup request failed: {e}")
 
 @router.get("/billing")
 async def get_billing_transactions(request: Request, limit: int = Query(100, ge=1, le=500)):

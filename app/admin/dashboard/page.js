@@ -19,7 +19,7 @@ import {
   Image as ImageIcon, ToggleLeft, ToggleRight, Play, LayoutTemplate,
   Megaphone, BadgePercent, Radio, MousePointerClick, Flame, Copy, CalendarDays,
   Target, BarChart3, Layers3, Landmark, CreditCard, Wallet, KeyRound, IndianRupee, Crown, Smartphone,
-  Facebook, Instagram, Twitter, Youtube, Linkedin, Share2
+  Facebook, Instagram, Twitter, Youtube, Linkedin, Share2, MessageCircle, Send
 } from 'lucide-react';
 
 const PRESET_IMAGES = [
@@ -245,6 +245,16 @@ function AdminDashboardContent() {
   const [billingStats, setBillingStats] = useState({ totalRevenue: 0, paidTransactions: 0, activePremiumProviders: 0 });
   const [loadingBilling, setLoadingBilling] = useState(false);
 
+  // Messaging Gateway State (SMS via MSG91, WhatsApp via Gupshup)
+  const [messaging, setMessaging] = useState({
+    smsEnabled: false, msg91AuthKey: '', msg91SenderId: '', msg91TemplateId: '', hasMsg91Key: false,
+    whatsappEnabled: false, gupshupApiKey: '', gupshupSourceNumber: '', gupshupAppName: '', hasGupshupKey: false,
+  });
+  const [savingMessaging, setSavingMessaging] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+  const [testingSms, setTestingSms] = useState(false);
+  const [testingWhatsapp, setTestingWhatsapp] = useState(false);
+
   // Hero Slider State
   const [heroSlides, setHeroSlides] = useState([]);
   const [loadingSlides, setLoadingSlides] = useState(false);
@@ -448,6 +458,18 @@ function AdminDashboardContent() {
     }
   }, []);
 
+  const fetchMessaging = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/messaging-gateway');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings) setMessaging(prev => ({ ...prev, ...data.settings, msg91AuthKey: '', gupshupApiKey: '' }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   const fetchBilling = useCallback(async () => {
     setLoadingBilling(true);
     try {
@@ -518,9 +540,10 @@ function AdminDashboardContent() {
     if (activeTab === 'bookings') fetchBookings();
     if (activeTab === 'settings') fetchSettings();
     if (activeTab === 'payment-gateway') { fetchGateway(); fetchBilling(); }
+    if (activeTab === 'messaging-gateway') fetchMessaging();
     if (activeTab === 'hero-slider' || activeTab === 'overview') fetchHeroSlides();
     if (activeTab === 'ads' || activeTab === 'overview') fetchAds();
-  }, [activeTab, fetchProviders, fetchCategories, fetchUsers, fetchLocations, fetchAnalytics, fetchBookings, fetchSettings, fetchGateway, fetchBilling, fetchHeroSlides, fetchAds]);
+  }, [activeTab, fetchProviders, fetchCategories, fetchUsers, fetchLocations, fetchAnalytics, fetchBookings, fetchSettings, fetchGateway, fetchBilling, fetchMessaging, fetchHeroSlides, fetchAds]);
 
   // Provider Actions
   const handleUpdateProviderStatus = async (providerId, updates) => {
@@ -945,6 +968,69 @@ function AdminDashboardContent() {
     }
   };
 
+  // Messaging Gateway Actions (SMS via MSG91, WhatsApp via Gupshup)
+  const handleSaveMessaging = async (e) => {
+    e.preventDefault();
+    setSavingMessaging(true);
+    try {
+      const res = await fetch('/api/admin/messaging-gateway', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messaging),
+      });
+      if (res.ok) {
+        toast.success('Messaging gateway settings saved!');
+        fetchMessaging();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || data.detail || 'Failed to save messaging settings');
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Network error while saving messaging settings');
+    } finally {
+      setSavingMessaging(false);
+    }
+  };
+
+  const handleTestSms = async () => {
+    if (!testPhone.trim()) { toast.error('Enter a phone number to send the test SMS to'); return; }
+    setTestingSms(true);
+    try {
+      const res = await fetch('/api/admin/messaging-gateway/test-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testPhone }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) toast.success(`MSG91 responded: ${data.response || 'sent'}`);
+      else toast.error(data.detail || data.response || 'MSG91 test failed');
+    } catch (e) {
+      toast.error('Network error while sending test SMS');
+    } finally {
+      setTestingSms(false);
+    }
+  };
+
+  const handleTestWhatsapp = async () => {
+    if (!testPhone.trim()) { toast.error('Enter a phone number to send the test WhatsApp message to'); return; }
+    setTestingWhatsapp(true);
+    try {
+      const res = await fetch('/api/admin/messaging-gateway/test-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testPhone }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) toast.success(`Gupshup responded: ${data.response || 'sent'}`);
+      else toast.error(data.detail || data.response || 'Gupshup test failed');
+    } catch (e) {
+      toast.error('Network error while sending test WhatsApp message');
+    } finally {
+      setTestingWhatsapp(false);
+    }
+  };
+
   // Hero Slide Actions
   const handleCreateSlide = async (e) => {
     e.preventDefault();
@@ -1205,6 +1291,7 @@ function AdminDashboardContent() {
     { id: 'users', icon: ShieldCheck, title: 'Role & Permissions', desc: 'Manage user access, promote State/District Managers', color: 'from-primary to-primary/80', count: `${stats.customers || 0} users` },
     { id: 'settings', icon: Settings, title: 'CMS & Settings', desc: 'Emergency banners, helpline, SEO and platform toggles', color: 'from-accent to-accent/80', count: 'Platform Config' },
     { id: 'payment-gateway', icon: CreditCard, title: 'Payment Gateway', desc: 'Connect Razorpay for Premium plan checkout & view billing', color: 'from-primary to-primary/80', count: gateway.enabled ? 'Connected' : 'Not configured' },
+    { id: 'messaging-gateway', icon: MessageCircle, title: 'SMS & WhatsApp API', desc: 'Connect MSG91 for SMS and Gupshup for WhatsApp Business messaging', color: 'from-emerald-500 to-teal-700', count: (messaging.smsEnabled || messaging.whatsappEnabled) ? 'Connected' : 'Not configured' },
   ];
 
   return (
@@ -1260,6 +1347,7 @@ function AdminDashboardContent() {
               { id: 'bookings', label: 'Bookings', icon: Calendar },
               { id: 'settings', label: 'CMS Settings', icon: Settings },
               { id: 'payment-gateway', label: 'Payment Gateway', icon: CreditCard },
+              { id: 'messaging-gateway', label: 'SMS & WhatsApp', icon: MessageCircle },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -2586,6 +2674,159 @@ function AdminDashboardContent() {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ========================================================= */}
+        {/* TAB: SMS & WHATSAPP MESSAGING GATEWAY */}
+        {/* ========================================================= */}
+        {activeTab === 'messaging-gateway' && (
+          <div className="space-y-6 max-w-3xl animate-fadeIn">
+            <div>
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                <MessageCircle className="w-6 h-6 text-emerald-500" /> SMS & WhatsApp API
+              </h1>
+              <p className="text-xs text-muted-foreground mt-1">
+                Connect MSG91 to send transactional SMS and Gupshup to send WhatsApp Business messages.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveMessaging} className="space-y-5 bg-card border border-border rounded-2xl p-6 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white flex items-center gap-2"><Send className="w-4 h-4 text-emerald-500" /> MSG91 (SMS)</h3>
+                <Badge className={messaging.smsEnabled ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-muted text-muted-foreground border-border'} variant="outline">
+                  {messaging.smsEnabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">MSG91 Auth Key</label>
+                <Input
+                  type="password"
+                  value={messaging.msg91AuthKey}
+                  onChange={(e) => setMessaging({ ...messaging, msg91AuthKey: e.target.value })}
+                  placeholder={messaging.hasMsg91Key ? '•••••••• (leave blank to keep existing)' : 'Enter MSG91 auth key'}
+                  className="bg-background border-border text-xs text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Sender ID</label>
+                  <Input
+                    value={messaging.msg91SenderId}
+                    onChange={(e) => setMessaging({ ...messaging, msg91SenderId: e.target.value })}
+                    placeholder="e.g. SRCHSV"
+                    className="bg-background border-border text-xs text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Template/Flow ID (optional)</label>
+                  <Input
+                    value={messaging.msg91TemplateId}
+                    onChange={(e) => setMessaging({ ...messaging, msg91TemplateId: e.target.value })}
+                    placeholder="DLT-registered flow ID, if required"
+                    className="bg-background border-border text-xs text-white font-mono"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">Leave blank to use MSG91's simple send API (works without a DLT template on trial accounts).</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <input
+                  type="checkbox"
+                  id="smsEnabled"
+                  checked={messaging.smsEnabled}
+                  onChange={(e) => setMessaging({ ...messaging, smsEnabled: e.target.checked })}
+                  className="w-4 h-4 rounded bg-background border-border text-emerald-600 focus:ring-0"
+                />
+                <label htmlFor="smsEnabled" className="text-xs text-foreground cursor-pointer">
+                  Enable SMS sending via MSG91
+                </label>
+              </div>
+
+              <div className="pt-5 border-t border-border flex items-center justify-between">
+                <h3 className="font-bold text-white flex items-center gap-2"><MessageCircle className="w-4 h-4 text-emerald-500" /> Gupshup (WhatsApp)</h3>
+                <Badge className={messaging.whatsappEnabled ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-muted text-muted-foreground border-border'} variant="outline">
+                  {messaging.whatsappEnabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">Gupshup API Key</label>
+                <Input
+                  type="password"
+                  value={messaging.gupshupApiKey}
+                  onChange={(e) => setMessaging({ ...messaging, gupshupApiKey: e.target.value })}
+                  placeholder={messaging.hasGupshupKey ? '•••••••• (leave blank to keep existing)' : 'Enter Gupshup API key'}
+                  className="bg-background border-border text-xs text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">WhatsApp Source Number</label>
+                  <Input
+                    value={messaging.gupshupSourceNumber}
+                    onChange={(e) => setMessaging({ ...messaging, gupshupSourceNumber: e.target.value })}
+                    placeholder="e.g. 919876543210"
+                    className="bg-background border-border text-xs text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Gupshup App Name</label>
+                  <Input
+                    value={messaging.gupshupAppName}
+                    onChange={(e) => setMessaging({ ...messaging, gupshupAppName: e.target.value })}
+                    placeholder="Your Gupshup app name"
+                    className="bg-background border-border text-xs text-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <input
+                  type="checkbox"
+                  id="whatsappEnabled"
+                  checked={messaging.whatsappEnabled}
+                  onChange={(e) => setMessaging({ ...messaging, whatsappEnabled: e.target.checked })}
+                  className="w-4 h-4 rounded bg-background border-border text-emerald-600 focus:ring-0"
+                />
+                <label htmlFor="whatsappEnabled" className="text-xs text-foreground cursor-pointer">
+                  Enable WhatsApp sending via Gupshup
+                </label>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <Button type="submit" disabled={savingMessaging} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5">
+                  <Save className="w-3.5 h-3.5" /> {savingMessaging ? 'Saving...' : 'Save Messaging Settings'}
+                </Button>
+              </div>
+            </form>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-5 space-y-3">
+                <h3 className="font-bold text-white flex items-center gap-2"><Smartphone className="w-4 h-4 text-emerald-500" /> Send a Test Message</h3>
+                <p className="text-xs text-muted-foreground">Save your settings above first, then verify they work by sending a real test message.</p>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Test Phone Number</label>
+                  <Input
+                    value={testPhone}
+                    onChange={(e) => setTestPhone(e.target.value)}
+                    placeholder="+919876543210"
+                    className="bg-background border-border text-xs text-white font-mono max-w-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Button type="button" disabled={testingSms} onClick={handleTestSms} variant="outline" className="bg-background border-border text-xs gap-1.5">
+                    <Send className="w-3.5 h-3.5" /> {testingSms ? 'Sending...' : 'Send Test SMS'}
+                  </Button>
+                  <Button type="button" disabled={testingWhatsapp} onClick={handleTestWhatsapp} variant="outline" className="bg-background border-border text-xs gap-1.5">
+                    <MessageCircle className="w-3.5 h-3.5" /> {testingWhatsapp ? 'Sending...' : 'Send Test WhatsApp'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
