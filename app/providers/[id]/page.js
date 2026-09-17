@@ -15,6 +15,62 @@ import {
   Award, CheckCircle2, Calendar, User, Send, Search
 } from 'lucide-react';
 
+function buildProviderFaqSchema(p, isDoctor) {
+  const qa = [];
+
+  if (p.timings?.days) {
+    const hours = [p.timings.morning, p.timings.evening].filter(Boolean).join(' and ');
+    qa.push([
+      `What are ${p.name}'s operating hours?`,
+      `${p.name} is open ${p.timings.days}${hours ? `, ${hours}` : ''}.${p.timings.holiday ? ` Closed on ${p.timings.holiday}.` : ''}`,
+    ]);
+  }
+
+  if (p.phone) {
+    qa.push([
+      `How can I contact ${p.name}?`,
+      `You can call ${p.name} at ${p.phone}${p.whatsapp ? ` or message on WhatsApp at ${p.whatsapp}` : ''}. They are located in ${p.area ? `${p.area}, ` : ''}${p.city}.`,
+    ]);
+  }
+
+  if (p.services?.length) {
+    qa.push([
+      `What services does ${p.name} offer${p.city ? ` in ${p.city}` : ''}?`,
+      `${p.name} offers: ${p.services.join(', ')}.`,
+    ]);
+  }
+
+  if (isDoctor && p.fees) {
+    qa.push([
+      `What is the consultation fee for ${p.name}?`,
+      `${p.name}'s consultation fee is around ₹${p.fees}. Confirm the exact fee when booking.`,
+    ]);
+  } else if (p.priceFrom || p.priceTo) {
+    qa.push([
+      `How much does ${p.name} charge?`,
+      `${p.name}'s pricing typically ranges from ₹${p.priceFrom || 0} to ₹${p.priceTo || p.priceFrom || 0}, depending on the service.`,
+    ]);
+  }
+
+  const ratingText = p.reviewCount > 0 ? `, rated ${p.rating || 'N/A'} out of 5 from ${p.reviewCount} reviews` : '';
+  qa.push([
+    `Is ${p.name} a verified service provider?`,
+    p.verified
+      ? `Yes, ${p.name} is a verified provider on Search2Service${ratingText}.`
+      : `${p.name} is listed on Search2Service${ratingText}.`,
+  ]);
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: qa.map(([q, a]) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  };
+}
+
 export default function ProviderPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -46,9 +102,11 @@ export default function ProviderPage() {
 
   const p = data.provider;
   const isDoctor = !!p.specialization;
+  const faqSchema = buildProviderFaqSchema(p, isDoctor);
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       <header className="sticky top-0 z-50 bg-white border-b border-border">
         <div className="container mx-auto px-4 h-14 flex items-center gap-3">
           <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="w-4 h-4" />Back</button>
@@ -60,7 +118,7 @@ export default function ProviderPage() {
       </header>
 
       {/* BANNER */}
-      <div className="h-56 md:h-72 bg-cover bg-center relative" style={{ backgroundImage: `url(${p.banner || p.images?.[0]})` }}>
+      <div className="h-56 md:h-72 bg-cover bg-center relative" style={{ backgroundImage: `url(${p.banner || p.images?.[0]})` }} role="img" aria-label={`${p.name}, ${p.categoryName} in ${p.area ? `${p.area}, ` : ''}${p.city}`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 container mx-auto px-4 pb-5 text-white">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -131,7 +189,7 @@ export default function ProviderPage() {
             <TabsContent value="gallery" className="mt-4">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {p.images?.map((img, i) => (
-                  <div key={i} className="aspect-video bg-cover bg-center rounded-lg" style={{ backgroundImage: `url(${img})` }} />
+                  <div key={i} className="aspect-video bg-cover bg-center rounded-lg" style={{ backgroundImage: `url(${img})` }} role="img" aria-label={`${p.name} gallery photo ${i + 1}`} />
                 ))}
               </div>
             </TabsContent>
@@ -233,7 +291,7 @@ export default function ProviderPage() {
               <div className="space-y-3">
                 {data.similar.map(s => (
                   <Link key={s.id} href={`/providers/${s.id}`} className="flex gap-3 hover:bg-muted/50 rounded p-1">
-                    <div className="w-14 h-14 rounded bg-cover bg-center flex-shrink-0" style={{ backgroundImage: `url(${s.images?.[0]})` }} />
+                    <div className="w-14 h-14 rounded bg-cover bg-center flex-shrink-0" style={{ backgroundImage: `url(${s.images?.[0]})` }} role="img" aria-label={s.name} />
                     <div className="min-w-0">
                       <div className="font-semibold text-sm truncate">{s.name}</div>
                       <div className="text-xs text-muted-foreground">{s.area}, {s.city}</div>

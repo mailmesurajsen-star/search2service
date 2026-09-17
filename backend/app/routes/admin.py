@@ -913,6 +913,8 @@ class AdminSettingsPayload(BaseModel):
     youtubeIcon: Optional[str] = ""
     linkedinIcon: Optional[str] = ""
     whatsappIcon: Optional[str] = ""
+    googleLoginEnabled: Optional[bool] = False
+    googleClientId: Optional[str] = ""
 
 @router.get("/settings")
 async def get_admin_settings(request: Request):
@@ -942,7 +944,9 @@ async def get_admin_settings(request: Request):
             "twitterIcon": "",
             "youtubeIcon": "",
             "linkedinIcon": "",
-            "whatsappIcon": ""
+            "whatsappIcon": "",
+            "googleLoginEnabled": False,
+            "googleClientId": ""
         }
     return {"settings": clean_doc(settings)}
 

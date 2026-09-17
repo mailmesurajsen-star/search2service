@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const PRESET_IMAGES = [
-  { label: '🇮🇳 India Marketplace', url: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg', gradient: 'from-blue-950/90 via-blue-900/85 to-orange-800/80', badge: '🇮🇳 India’s Complete Services Marketplace' },
+  { label: '🇮🇳 India Marketplace', url: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920', gradient: 'from-blue-950/90 via-blue-900/85 to-orange-800/80', badge: '🇮🇳 India’s Complete Services Marketplace' },
   { label: '🩺 Healthcare & Doctors', url: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1920&q=80', gradient: 'from-slate-950/90 via-blue-950/85 to-cyan-950/80', badge: '🩺 Verified Healthcare & Doctors' },
   { label: '⚡ Home Repair & Experts', url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=1920&q=80', gradient: 'from-slate-950/90 via-amber-950/85 to-orange-950/80', badge: '⚡ Fast & Reliable Home Experts' },
   { label: '💼 Jobs & Business', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1920&q=80', gradient: 'from-indigo-950/90 via-purple-950/85 to-slate-950/80', badge: '💼 Verified Businesses & Job Opportunities' },
@@ -114,7 +114,7 @@ const AD_PRESETS = [
     label: '🚀 Partner With Us - List Business',
     title: '📱 List Your Business & Reach 10,000+ Customers Every Month',
     subtitle: 'Join Search2Service Partner Network today with zero listing fee.',
-    imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
+    imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920',
     targetUrl: '/auth?mode=register&role=provider',
     placement: 'footer_banner',
     badge: '🚀 Partner Program',
@@ -233,7 +233,9 @@ function AdminDashboardContent() {
     twitterIcon: '',
     youtubeIcon: '',
     linkedinIcon: '',
-    whatsappIcon: ''
+    whatsappIcon: '',
+    googleLoginEnabled: false,
+    googleClientId: ''
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState('');
@@ -265,7 +267,7 @@ function AdminDashboardContent() {
     highlightText: '',
     badge: '🇮🇳 India’s Complete Services Marketplace',
     subtitle: 'Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.',
-    imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
+    imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920',
     overlayGradient: 'from-blue-950/40 via-blue-900/40 to-orange-800/40',
     ctaText: 'Explore Categories',
     ctaLink: '/categories',
@@ -1050,7 +1052,7 @@ function AdminDashboardContent() {
           highlightText: '',
           badge: '🇮🇳 India’s Complete Services Marketplace',
           subtitle: '',
-          imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
+          imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920',
           overlayGradient: 'from-blue-950/40 via-blue-900/40 to-orange-800/40',
           ctaText: 'Explore Categories',
           ctaLink: '/categories',
@@ -2504,6 +2506,34 @@ function AdminDashboardContent() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5" /> Google Login
+                </label>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Lets customers sign in with their Google account instead of a password. Create an OAuth Client ID
+                  in the <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline text-accent">Google Cloud Console</a> and paste it below.
+                </p>
+                <Input
+                  value={settings.googleClientId}
+                  onChange={(e) => setSettings({ ...settings, googleClientId: e.target.value })}
+                  placeholder="xxxxxxxxxxxx.apps.googleusercontent.com"
+                  className="bg-background border-border text-xs text-white font-mono"
+                />
+                <div className="flex items-center gap-3 pt-2">
+                  <input
+                    type="checkbox"
+                    id="googleLoginEnabled"
+                    checked={settings.googleLoginEnabled}
+                    onChange={(e) => setSettings({ ...settings, googleLoginEnabled: e.target.checked })}
+                    className="w-4 h-4 rounded bg-background border-border text-accent focus:ring-0"
+                  />
+                  <label htmlFor="googleLoginEnabled" className="text-xs text-foreground cursor-pointer">
+                    Show "Continue with Google" on the Login page
+                  </label>
                 </div>
               </div>
 

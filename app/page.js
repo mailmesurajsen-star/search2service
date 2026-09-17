@@ -38,6 +38,25 @@ function Icon({ name, className }) {
   return <C className={className} />;
 }
 
+const HOME_FAQS = [
+  ['How does Search2Service work?', 'Search for any service you need, filter by state/city/area, view provider profiles, ratings and reviews, and contact them directly via call, WhatsApp or online booking.'],
+  ['Is it free for customers?', 'Yes! Searching, browsing, and contacting service providers on Search2Service is 100% free for customers.'],
+  ['How can I list my business?', 'Click "List Business" at the top, register your business, upload photos, add services & pricing, and start receiving customers.'],
+  ['Are providers verified?', 'We verify every business through document checks and customer feedback. Look for the verified badge.'],
+  ['How do I book a doctor appointment?', 'Search for the doctor or specialization, view their profile, and click "Book Appointment" to schedule online or offline consultation.'],
+  ['What payment methods are supported?', 'We support UPI, credit/debit cards, net banking, and wallets via Razorpay. Cash on service is also available with most providers.'],
+];
+
+const HOME_FAQ_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: HOME_FAQS.map(([q, a]) => ({
+    '@type': 'Question',
+    name: q,
+    acceptedAnswer: { '@type': 'Answer', text: a },
+  })),
+};
+
 export default function App() {
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -190,7 +209,12 @@ export default function App() {
               <Link key={d.id} href={`/providers/${d.id}`} className="group">
                 <Card className="h-full hover:shadow-xl transition-shadow overflow-hidden">
                   <div className="aspect-square bg-muted relative">
-                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${d.images?.[0]})` }} />
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${d.images?.[0]})` }}
+                      role="img"
+                      aria-label={`${d.name}, ${d.specialization} in ${d.city}`}
+                    />
                     {d.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
                   </div>
                   <CardContent className="p-4">
@@ -358,17 +382,11 @@ export default function App() {
 
       {/* FAQ */}
       <section className="py-16">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_FAQ_SCHEMA) }} />
         <div className="container mx-auto px-4 max-w-3xl">
           <SectionHeader title="Frequently Asked Questions" subtitle="Everything you need to know" />
           <Accordion type="single" collapsible className="mt-8">
-            {[
-              ['How does Search2Service work?', 'Search for any service you need, filter by state/city/area, view provider profiles, ratings and reviews, and contact them directly via call, WhatsApp or online booking.'],
-              ['Is it free for customers?', 'Yes! Searching, browsing, and contacting service providers on Search2Service is 100% free for customers.'],
-              ['How can I list my business?', 'Click “List Business” at the top, register your business, upload photos, add services & pricing, and start receiving customers.'],
-              ['Are providers verified?', 'We verify every business through document checks and customer feedback. Look for the verified badge.'],
-              ['How do I book a doctor appointment?', 'Search for the doctor or specialization, view their profile, and click “Book Appointment” to schedule online or offline consultation.'],
-              ['What payment methods are supported?', 'We support UPI, credit/debit cards, net banking, and wallets via Razorpay. Cash on service is also available with most providers.'],
-            ].map(([q, a], i) => (
+            {HOME_FAQS.map(([q, a], i) => (
               <AccordionItem key={i} value={`i${i}`}>
                 <AccordionTrigger className="text-left">{q}</AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">{a}</AccordionContent>
@@ -411,7 +429,7 @@ function ProviderCard({ p }) {
   return (
     <div onClick={go} className="cursor-pointer h-full">
     <Card className="h-full hover:shadow-xl transition-all group overflow-hidden">
-      <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }}>
+      <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }} role="img" aria-label={`${p.name}, ${p.categoryName} in ${p.city}`}>
         {p.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
         {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-accent" /></div>}
       </div>
@@ -438,7 +456,7 @@ function MiniCard({ p }) {
   return (
     <Link href={`/providers/${p.id}`}>
       <Card className="hover:shadow-lg transition-shadow overflow-hidden group">
-        <div className="aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${p.images?.[0]})` }} />
+        <div className="aspect-video bg-cover bg-center" style={{ backgroundImage: `url(${p.images?.[0]})` }} role="img" aria-label={p.name} />
         <CardContent className="p-3">
           <div className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{p.name}</div>
           <div className="flex items-center justify-between mt-1">

@@ -13,7 +13,7 @@ const DEFAULT_SLIDE = {
   title: 'Find trusted services',
   highlightText: 'near you — in seconds.',
   subtitle: 'Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.',
-  imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg',
+  imageUrl: 'https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920',
   overlayGradient: 'from-primary/95 via-primary/80 to-primary/20',
   ctaText: 'Explore Categories',
   ctaLink: '/categories',
@@ -58,12 +58,20 @@ export function HeroSlider({ heroSlides = [], q, setQ, state, setState, city, se
     >
       <Carousel setApi={setApi} opts={{ loop: true }} className="w-full">
         <CarouselContent className="ml-0">
-          {slides.map((slide, idx) => (
+          {slides.map((slide, idx) => {
+            // Only the first slide's title is an <h1> — a carousel renders every
+            // slide's markup into the DOM at once (not just the visible one), so
+            // giving each slide its own <h1> creates multiple H1 tags on the page,
+            // which dilutes the page's primary keyword signal for SEO.
+            const HeadingTag = idx === 0 ? 'h1' : 'h2';
+            return (
             <CarouselItem key={slide.id || idx} className="pl-0">
               <div className="relative min-h-[580px] md:min-h-[640px] flex items-center">
                 <div
                   className="absolute inset-0 bg-cover bg-center"
                   style={{ backgroundImage: `url(${slide.imageUrl})` }}
+                  role="img"
+                  aria-label={slide.badge ? `${slide.badge} — ${slide.title}` : slide.title}
                 />
                 <div className={`absolute inset-0 bg-gradient-to-r ${slide.overlayGradient || DEFAULT_SLIDE.overlayGradient}`} />
 
@@ -76,7 +84,7 @@ export function HeroSlider({ heroSlides = [], q, setQ, state, setState, city, se
                       </div>
                     )}
 
-                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight mb-4">
+                    <HeadingTag className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight mb-4">
                       {slide.title}{' '}
                       {slide.highlightText && (
                         <>
@@ -84,7 +92,7 @@ export function HeroSlider({ heroSlides = [], q, setQ, state, setState, city, se
                           <span className="text-[#5EEAD4]">{slide.highlightText}</span>
                         </>
                       )}
-                    </h1>
+                    </HeadingTag>
 
                     <div className="flex flex-wrap items-center gap-4 mb-8">
                       {slide.subtitle && (
@@ -177,7 +185,8 @@ export function HeroSlider({ heroSlides = [], q, setQ, state, setState, city, se
                 </div>
               </div>
             </CarouselItem>
-          ))}
+            );
+          })}
         </CarouselContent>
       </Carousel>
 

@@ -47,8 +47,8 @@ export default function CategoriesPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Browse All Categories</h1>
-        <p className="text-muted-foreground mb-8">Find any service across {Object.values(groups).reduce((a, b) => a + b.length, 0)}+ categories</p>
+        <h1 className="text-3xl font-bold mb-2">Browse All Service Categories in India</h1>
+        <p className="text-muted-foreground mb-8">Find trusted local service providers across {Object.values(groups).reduce((a, b) => a + b.length, 0)}+ categories near you</p>
 
         <div className="space-y-8">
           {Object.entries(groups).map(([group, items]) => {

@@ -38,6 +38,8 @@ async def get_public_settings():
         "youtubeIcon": settings.get("youtubeIcon", ""),
         "linkedinIcon": settings.get("linkedinIcon", ""),
         "whatsappIcon": settings.get("whatsappIcon", ""),
+        "googleLoginEnabled": settings.get("googleLoginEnabled", False),
+        "googleClientId": settings.get("googleClientId", ""),
     }
 
 @router.get("/stats")

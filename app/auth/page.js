@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,6 +22,18 @@ const REGISTER_ROLES = [
 // Register requests can never accidentally cross-reference each other's endpoint.
 const LOGIN_API = '/api/auth/login';
 const REGISTER_API = '/api/auth/register';
+const GOOGLE_LOGIN_API = '/api/auth/google';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// FastAPI errors come back as {detail: "..."} or {detail: [{msg: "..."}]} (pydantic
+// validation errors) — not {error: "..."}, so that field alone was silently swallowing
+// every backend error message and always showing a generic "Failed".
+function extractErrorMessage(d) {
+  if (typeof d?.detail === 'string') return d.detail;
+  if (Array.isArray(d?.detail) && d.detail[0]?.msg) return d.detail[0].msg;
+  return d?.error || 'Failed';
+}
 
 function AuthInner() {
   const router = useRouter();
@@ -32,6 +44,14 @@ function AuthInner() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [google, setGoogle] = useState({ enabled: false, clientId: '' });
+  const googleButtonRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then(d => {
+      if (d?.googleLoginEnabled && d?.googleClientId) setGoogle({ enabled: true, clientId: d.googleClientId });
+    }).catch(() => {});
+  }, []);
 
   // After a successful login OR register, land the user on the right page.
   const afterAuth = async (d) => {
@@ -48,13 +68,40 @@ function AuthInner() {
     router.push(next);
   };
 
+  const handleGoogleCredential = async (response) => {
+    setBusy(true);
+    try {
+      const r = await fetch(GOOGLE_LOGIN_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(extractErrorMessage(d));
+      toast.success(`Welcome, ${d.user.name}!`);
+      await afterAuth(d);
+    } catch (e) { toast.error(e.message); }
+    finally { setBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!google.enabled || !google.clientId) return;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => {
+      if (!window.google || !googleButtonRef.current) return;
+      window.google.accounts.id.initialize({ client_id: google.clientId, callback: handleGoogleCredential });
+      window.google.accounts.id.renderButton(googleButtonRef.current, { theme: 'outline', size: 'large', width: 320 });
+    };
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, [google.enabled, google.clientId]);
+
   const submitLogin = async () => {
+    if (!EMAIL_RE.test(form.email.trim())) { toast.error('Enter a valid email address'); return; }
     setBusy(true);
     try {
       const body = { email: form.email, password: form.password };
       const r = await fetch(LOGIN_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Failed');
+      if (!r.ok) throw new Error(extractErrorMessage(d));
       toast.success(`Welcome back, ${d.user.name}!`);
       await afterAuth(d);
     } catch (e) { toast.error(e.message); }
@@ -62,12 +109,13 @@ function AuthInner() {
   };
 
   const submitRegister = async () => {
+    if (!EMAIL_RE.test(form.email.trim())) { toast.error('Enter a valid email address'); return; }
     setBusy(true);
     try {
       const body = { name: form.name, email: form.email, phone: form.phone, password: form.password, role };
       const r = await fetch(REGISTER_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Failed');
+      if (!r.ok) throw new Error(extractErrorMessage(d));
       // Registration does not auto-login — send the user to the Login tab to
       // authorize with their new credentials via the separate Login API.
       toast.success('Account created! Please login to continue.');
@@ -110,7 +158,7 @@ function AuthInner() {
                   <Label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Email Address</Label>
                   <div className="relative mt-1.5">
                     <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input className="pl-9 focus-visible:ring-accent" placeholder="name@example.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                    <Input className="pl-9 focus-visible:ring-accent" placeholder="Enter your email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   </div>
                 </div>
                 <div>
@@ -172,6 +220,17 @@ function AuthInner() {
                 <Button disabled={busy} onClick={submitRegister} className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserPlus className="w-4 h-4 mr-1.5" />Create Account</>}
                 </Button>
+              </div>
+            )}
+
+            {google.enabled && (
+              <div className="mt-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-[11px] text-muted-foreground">OR</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div ref={googleButtonRef} className="flex justify-center" />
               </div>
             )}
 

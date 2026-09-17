@@ -45,8 +45,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # --- Frontend (Next.js standalone output) ---
+# Next.js's standalone output does NOT automatically include public/ — it must
+# be copied in manually, or static assets (favicons, verification files, etc.)
+# silently 404 in production despite working fine in `npm run dev`.
 COPY --from=frontend-builder /app/.next/standalone ./
 COPY --from=frontend-builder /app/.next/static ./.next/static
+COPY --from=frontend-builder /app/public ./public
 
 # --- Backend (FastAPI) --- installed into a venv. Python's own `ensurepip`
 # bootstraps pip inside it from bundled wheels in the stdlib, so this doesn't

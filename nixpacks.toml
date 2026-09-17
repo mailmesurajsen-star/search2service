@@ -16,7 +16,8 @@ cmds = [
 [phases.build]
 cmds = [
   "npm run build",
-  "cp -r .next/static .next/standalone/.next/static"
+  "cp -r .next/static .next/standalone/.next/static",
+  "if [ -d public ]; then cp -r public .next/standalone/public; fi"
 ]
 
 [start]

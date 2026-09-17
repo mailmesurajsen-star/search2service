@@ -82,6 +82,8 @@ export function AdBanner({ placement = 'homepage_banner', className = '', initia
               <div
                 className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-cover bg-center shrink-0 border border-white/20 shadow-md"
                 style={{ backgroundImage: `url(${activeAd.imageUrl})` }}
+                role="img"
+                aria-label={activeAd.title}
               />
             ) : (
               <div className="w-14 h-14 rounded-xl bg-accent/20 border border-accent/30 grid place-items-center text-accent shrink-0">
@@ -172,6 +174,8 @@ export function AdBanner({ placement = 'homepage_banner', className = '', initia
           <div
             className="w-full h-32 rounded-xl bg-cover bg-center mb-3 border border-white/10 shadow-inner relative overflow-hidden"
             style={{ backgroundImage: `url(${activeAd.imageUrl})` }}
+            role="img"
+            aria-label={activeAd.title}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
           </div>
@@ -239,6 +243,8 @@ export function AdBanner({ placement = 'homepage_banner', className = '', initia
             <div
               className="w-16 h-16 rounded-xl bg-cover bg-center shrink-0 border border-white/20"
               style={{ backgroundImage: `url(${activeAd.imageUrl})` }}
+              role="img"
+              aria-label={activeAd.title}
             />
           )}
           <div>
@@ -277,6 +283,8 @@ export function AdBanner({ placement = 'homepage_banner', className = '', initia
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${activeAd.imageUrl})` }}
+            role="img"
+            aria-label={activeAd.title}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-black/10 to-black/10" />
         </>

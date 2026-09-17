@@ -133,7 +133,14 @@ function SearchInner() {
 
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">{loading ? 'Searching...' : `${total} results`}</h1>
+              <h1 className="text-2xl font-bold">
+                {loading ? 'Searching...' : (() => {
+                  const catName = category && categories.find(c => c.slug === category)?.name;
+                  const what = q || catName || 'Services';
+                  const where = city || state;
+                  return `${total} ${what} providers found${where ? ` in ${where}` : ' across India'}`;
+                })()}
+              </h1>
               <div className="text-sm text-muted-foreground mt-1">
                 {[category && categories.find(c => c.slug === category)?.name, city, state].filter(Boolean).join(' • ') || 'All services across India'}
               </div>
@@ -163,7 +170,7 @@ function SearchInner() {
               {items.map(p => (
                 <div key={p.id} onClick={() => router.push(`/providers/${p.id}`)} className="cursor-pointer h-full">
                 <Card className="h-full hover:shadow-xl transition-shadow group overflow-hidden">
-                    <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }}>
+                    <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }} role="img" aria-label={`${p.name}, ${p.categoryName || ''} in ${p.city || ''}`}>
                       {p.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
                       {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-emerald-600" /></div>}
                     </div>

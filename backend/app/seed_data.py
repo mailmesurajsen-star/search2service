@@ -236,14 +236,14 @@ DOC_SPEC = {
 }
 
 IMG = [
-    'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
-    'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800',
-    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
-    'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800',
-    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800',
-    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800',
-    'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
-    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800',
+    'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=800&q=80',
 ]
 
 def slugify(text: str) -> str:
@@ -418,7 +418,7 @@ def build_hero_slides():
             "title": "Find trusted services",
             "highlightText": "near you — in seconds.",
             "subtitle": "Doctors, home services, hotels, restaurants, jobs, government forms — everything you need on one platform.",
-            "imageUrl": "https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg",
+            "imageUrl": "https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920",
             "overlayGradient": "from-blue-950/40 via-blue-900/40 to-orange-800/40",
             "ctaText": "Explore Categories",
             "ctaLink": "/categories",
@@ -568,7 +568,7 @@ def build_ads():
             "id": str(uuid.uuid4()),
             "title": "📱 List Your Business & Reach 10,000+ Customers Every Month",
             "subtitle": "Join Search2Service Partner Network today with zero listing fee and instant customer leads.",
-            "imageUrl": "https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg",
+            "imageUrl": "https://images.pexels.com/photos/31786661/pexels-photo-31786661.jpeg?auto=compress&cs=tinysrgb&w=1920",
             "targetUrl": "/auth?mode=register&role=provider",
             "placement": "footer_banner",
             "badge": "🚀 Partner Program",
