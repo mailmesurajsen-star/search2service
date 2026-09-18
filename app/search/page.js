@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Filter, SlidersHorizontal, ChevronLeft, IndianRupee } from 'lucide-react';
+import { Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Filter, SlidersHorizontal, ChevronLeft, IndianRupee, ExternalLink } from 'lucide-react';
 import { AdBanner } from '@/components/ad-banner';
 
 function SearchInner() {
@@ -167,32 +167,50 @@ function SearchInner() {
             </CardContent></Card>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {items.map(p => (
-                <div key={p.id} onClick={() => router.push(`/providers/${p.id}`)} className="cursor-pointer h-full">
+              {items.map(p => {
+                const isGovService = p.group === 'Government Services';
+                const openService = () => {
+                  if (isGovService) {
+                    if (p.website) window.open(p.website, '_blank', 'noopener,noreferrer');
+                  } else {
+                    router.push(`/providers/${p.id}`);
+                  }
+                };
+                return (
+                <div key={p.id} onClick={openService} className="cursor-pointer h-full">
                 <Card className="h-full hover:shadow-xl transition-shadow group overflow-hidden">
-                    <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0]})` }} role="img" aria-label={`${p.name}, ${p.categoryName || ''} in ${p.city || ''}`}>
+                    <div className="aspect-video bg-cover bg-center relative" style={{ backgroundImage: `url(${p.images?.[0] || p.banner || ''})` }} role="img" aria-label={`${p.name}, ${p.categoryName || ''} in ${p.city || ''}`}>
                       {p.premium && <Badge className="absolute top-3 left-3 bg-[#F5A623] hover:bg-[#F5A623] text-white">PREMIUM</Badge>}
                       {p.verified && <div className="absolute top-3 right-3 bg-white/90 rounded-full p-1"><ShieldCheck className="w-4 h-4 text-emerald-600" /></div>}
                     </div>
                     <CardContent className="p-4">
                       <div className="font-bold group-hover:text-primary transition-colors">{p.name}</div>
                       {p.doctorName && <div className="text-xs text-muted-foreground font-medium">{p.doctorName}</div>}
-                      <div className="text-xs text-muted-foreground mt-0.5">{p.categoryName} {p.specialization && `• ${p.specialization}`}</div>
-                      <div className="flex items-center gap-1 mt-2 text-sm">
-                        <Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" />
-                        <span className="font-semibold">{p.rating}</span>
-                        <span className="text-muted-foreground">({p.reviewCount} reviews)</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
-                      {p.fees && <div className="text-xs text-muted-foreground mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
-                      <div className="flex gap-2 mt-3">
-                        <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><Phone className="w-3 h-3 mr-1" />Call</a>
-                        <a href={`https://wa.me/${p.whatsapp?.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-emerald-50 text-emerald-700 text-xs font-medium grid place-items-center hover:bg-emerald-100"><MessageCircle className="w-3 h-3 mr-1" />WhatsApp</a>
-                      </div>
+                      {!isGovService && <div className="text-xs text-muted-foreground mt-0.5">{p.categoryName} {p.specialization && `• ${p.specialization}`}</div>}
+                      {isGovService ? (
+                        <div className="flex gap-2 mt-3">
+                          <a href={p.website || '#'} target={p.website ? '_blank' : undefined} rel="noopener noreferrer" onClick={e => { e.stopPropagation(); if (!p.website) e.preventDefault(); }} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><ExternalLink className="w-3 h-3 mr-1" />Visit Website</a>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-1 mt-2 text-sm">
+                            <Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" />
+                            <span className="font-semibold">{p.rating}</span>
+                            <span className="text-muted-foreground">({p.reviewCount} reviews)</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
+                          {p.fees && <div className="text-xs text-muted-foreground mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
+                          <div className="flex gap-2 mt-3">
+                            <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><Phone className="w-3 h-3 mr-1" />Call</a>
+                            <a href={`https://wa.me/${p.whatsapp?.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-emerald-50 text-emerald-700 text-xs font-medium grid place-items-center hover:bg-emerald-100"><MessageCircle className="w-3 h-3 mr-1" />WhatsApp</a>
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

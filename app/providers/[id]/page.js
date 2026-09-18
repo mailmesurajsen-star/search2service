@@ -82,6 +82,16 @@ export default function ProviderPage() {
     fetch(`/api/providers/${id}`).then(r => r.json()).then(d => { setData(d); setLoading(false); });
   }, [id]);
 
+  // Government service listings have no bookings/reviews page of their own —
+  // send visitors straight to the official website instead, in case this page
+  // is reached directly (old link, bookmark) rather than via search/homepage.
+  useEffect(() => {
+    const p = data?.provider;
+    if (p?.group === 'Government Services' && p.website) {
+      window.location.replace(p.website);
+    }
+  }, [data]);
+
   const submitReview = async () => {
     if (!reviewForm.userName || !reviewForm.comment) { toast.error('Please add your name and review'); return; }
     setSubmitting(true);

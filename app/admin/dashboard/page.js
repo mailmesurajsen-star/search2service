@@ -19,7 +19,7 @@ import {
   Image as ImageIcon, ToggleLeft, ToggleRight, Play, LayoutTemplate,
   Megaphone, BadgePercent, Radio, MousePointerClick, Flame, Copy, CalendarDays,
   Target, BarChart3, Layers3, Landmark, CreditCard, Wallet, KeyRound, IndianRupee, Crown, Smartphone,
-  Facebook, Instagram, Twitter, Youtube, Linkedin, Share2, MessageCircle, Send
+  Facebook, Instagram, Twitter, Youtube, Linkedin, Share2, MessageCircle, Send, X
 } from 'lucide-react';
 
 const PRESET_IMAGES = [
@@ -161,13 +161,18 @@ function AdminDashboardContent() {
     phone: '', email: '', priceFrom: '₹199', description: '', status: 'active', verified: true
   });
 
-  // Government Service Upload State
+  // Government Service Upload State — kept intentionally minimal: name, website, logo only.
+  // Every entry is filed under one fixed "CSC Center" category behind the scenes so the
+  // existing category/group data model (used by search & category filters) still works,
+  // without asking the admin to pick a service type.
+  const GOVT_SERVICE_DEFAULT_CATEGORY = 'csc-center';
   const [isAddGovtServiceOpen, setIsAddGovtServiceOpen] = useState(false);
   const [newGovtService, setNewGovtService] = useState({
-    name: '', categorySlug: 'csc-center', customCategoryName: '', website: '', banner: '', status: 'active', verified: true
+    name: '', categorySlug: GOVT_SERVICE_DEFAULT_CATEGORY, website: '', banner: '', status: 'active', verified: true
   });
-  const [isCustomGovtType, setIsCustomGovtType] = useState(false);
   const [editingGovtService, setEditingGovtService] = useState(null);
+  const [govtServices, setGovtServices] = useState([]);
+  const [loadingGovtServices, setLoadingGovtServices] = useState(false);
 
   // Category Management State
   const [categories, setCategories] = useState([]);
@@ -345,6 +350,21 @@ function AdminDashboardContent() {
       setLoadingProviders(false);
     }
   }, [providerSearch, providerCategory, providerStatus]);
+
+  const fetchGovtServices = useCallback(async () => {
+    setLoadingGovtServices(true);
+    try {
+      const res = await fetch(`/api/admin/providers?category=${GOVT_SERVICE_DEFAULT_CATEGORY}&limit=200`);
+      if (res.ok) {
+        const data = await res.json();
+        setGovtServices(data.items || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingGovtServices(false);
+    }
+  }, []);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -543,9 +563,10 @@ function AdminDashboardContent() {
     if (activeTab === 'settings') fetchSettings();
     if (activeTab === 'payment-gateway') { fetchGateway(); fetchBilling(); }
     if (activeTab === 'messaging-gateway') fetchMessaging();
+    if (activeTab === 'govt-services') fetchGovtServices();
     if (activeTab === 'hero-slider' || activeTab === 'overview') fetchHeroSlides();
     if (activeTab === 'ads' || activeTab === 'overview') fetchAds();
-  }, [activeTab, fetchProviders, fetchCategories, fetchUsers, fetchLocations, fetchAnalytics, fetchBookings, fetchSettings, fetchGateway, fetchBilling, fetchMessaging, fetchHeroSlides, fetchAds]);
+  }, [activeTab, fetchProviders, fetchCategories, fetchUsers, fetchLocations, fetchAnalytics, fetchBookings, fetchSettings, fetchGateway, fetchBilling, fetchMessaging, fetchGovtServices, fetchHeroSlides, fetchAds]);
 
   // Provider Actions
   const handleUpdateProviderStatus = async (providerId, updates) => {
@@ -570,6 +591,19 @@ function AdminDashboardContent() {
       const res = await fetch(`/api/admin/providers/${providerId}`, { method: 'DELETE' });
       if (res.ok) {
         fetchProviders();
+        fetchOverviewStats();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteGovtService = async (providerId, name) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/admin/providers/${providerId}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchGovtServices();
         fetchOverviewStats();
       }
     } catch (e) {
@@ -605,48 +639,23 @@ function AdminDashboardContent() {
       toast.error('Service name is required');
       return;
     }
-    if (isCustomGovtType && !newGovtService.customCategoryName.trim()) {
-      toast.error('Enter a name for the custom service type');
+    if (!newGovtService.website.trim()) {
+      toast.error('Service website URL is required');
       return;
     }
     try {
-      let categorySlug = newGovtService.categorySlug;
-
-      if (isCustomGovtType) {
-        const catRes = await fetch('/api/admin/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: newGovtService.customCategoryName.trim(),
-            group: 'Government Services',
-            icon: 'Landmark',
-            groupIcon: 'Landmark',
-            color: 'from-orange-500 to-red-600',
-          }),
-        });
-        const catData = await catRes.json();
-        if (!catRes.ok) {
-          toast.error(catData.error || catData.detail || 'Failed to create custom service type');
-          return;
-        }
-        categorySlug = catData.category.slug;
-        fetchCategories();
-      }
-
-      const { customCategoryName, ...payload } = newGovtService;
       const res = await fetch('/api/admin/providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, categorySlug }),
+        body: JSON.stringify(newGovtService),
       });
       if (res.ok) {
         toast.success('Government service listed successfully!');
         setIsAddGovtServiceOpen(false);
-        setIsCustomGovtType(false);
         setNewGovtService({
-          name: '', categorySlug: 'csc-center', customCategoryName: '', website: '', banner: '', status: 'active', verified: true
+          name: '', categorySlug: GOVT_SERVICE_DEFAULT_CATEGORY, website: '', banner: '', status: 'active', verified: true
         });
-        fetchProviders();
+        fetchGovtServices();
         fetchOverviewStats();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -679,7 +688,7 @@ function AdminDashboardContent() {
       if (res.ok) {
         toast.success('Government service updated!');
         setEditingGovtService(null);
-        fetchProviders();
+        fetchGovtServices();
       } else {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error || data.detail || 'Failed to update government service');
@@ -1294,6 +1303,7 @@ function AdminDashboardContent() {
     { id: 'settings', icon: Settings, title: 'CMS & Settings', desc: 'Emergency banners, helpline, SEO and platform toggles', color: 'from-accent to-accent/80', count: 'Platform Config' },
     { id: 'payment-gateway', icon: CreditCard, title: 'Payment Gateway', desc: 'Connect Razorpay for Premium plan checkout & view billing', color: 'from-primary to-primary/80', count: gateway.enabled ? 'Connected' : 'Not configured' },
     { id: 'messaging-gateway', icon: MessageCircle, title: 'SMS & WhatsApp API', desc: 'Connect MSG91 for SMS and Gupshup for WhatsApp Business messaging', color: 'from-emerald-500 to-teal-700', count: (messaging.smsEnabled || messaging.whatsappEnabled) ? 'Connected' : 'Not configured' },
+    { id: 'govt-services', icon: Landmark, title: 'Government Services', desc: 'Add CSC, PAN, Aadhaar, Passport & other government service links', color: 'from-orange-500 to-red-600', count: `${govtServices.length} listed` },
   ];
 
   return (
@@ -1350,6 +1360,7 @@ function AdminDashboardContent() {
               { id: 'settings', label: 'CMS Settings', icon: Settings },
               { id: 'payment-gateway', label: 'Payment Gateway', icon: CreditCard },
               { id: 'messaging-gateway', label: 'SMS & WhatsApp', icon: MessageCircle },
+              { id: 'govt-services', label: 'Govt Services', icon: Landmark },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1491,9 +1502,6 @@ function AdminDashboardContent() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button onClick={() => setIsAddGovtServiceOpen(true)} variant="outline" className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary text-xs gap-1.5">
-                  <Landmark className="w-4 h-4" /> Add Government Service
-                </Button>
                 <Button onClick={() => setIsAddProviderOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5 shadow-md shadow-blue-600/30">
                   <Plus className="w-4 h-4" /> Add New Provider
                 </Button>
@@ -1547,13 +1555,14 @@ function AdminDashboardContent() {
               </CardContent>
             </Card>
 
-            {/* Providers Table / Cards */}
-            {loadingProviders ? (
+            {/* Providers Table / Cards — government service links live in their own
+                "Government Services" tab now, not mixed in with real businesses here. */}
+            {(() => { const businessProviders = providers.filter(p => p.group !== 'Government Services'); return loadingProviders ? (
               <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
                 <RefreshCw className="w-6 h-6 animate-spin text-accent mb-2" />
                 <span>Loading providers...</span>
               </div>
-            ) : providers.length === 0 ? (
+            ) : businessProviders.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
                 <Building2 className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
                 <div className="text-base font-semibold text-muted-foreground">No Providers Found</div>
@@ -1575,7 +1584,7 @@ function AdminDashboardContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {providers.map((p) => (
+                      {businessProviders.map((p) => (
                         <tr key={p.id} className="hover:bg-muted/40 transition">
                           {/* Business Name & Contact */}
                           <td className="py-3 px-4">
@@ -1680,7 +1689,7 @@ function AdminDashboardContent() {
                   </table>
                 </div>
               </div>
-            )}
+            ); })()}
           </div>
         )}
 
@@ -2863,6 +2872,72 @@ function AdminDashboardContent() {
         )}
 
         {/* ========================================================= */}
+        {/* TAB: GOVERNMENT SERVICES */}
+        {/* ========================================================= */}
+        {activeTab === 'govt-services' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Landmark className="w-6 h-6 text-orange-500" /> Government Services
+                </h1>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Service name, website link, and logo only — clicking a service on the site opens its official website directly.
+                </p>
+              </div>
+              <Button onClick={() => setIsAddGovtServiceOpen(true)} className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs gap-1.5 shadow-md shadow-blue-600/30">
+                <Plus className="w-4 h-4" /> Add Government Service
+              </Button>
+            </div>
+
+            {loadingGovtServices ? (
+              <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
+                <RefreshCw className="w-6 h-6 animate-spin text-accent mb-2" />
+                <span>Loading government services...</span>
+              </div>
+            ) : govtServices.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
+                <Landmark className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                <div className="text-base font-semibold text-muted-foreground">No Government Services Listed</div>
+                <p className="text-xs text-muted-foreground mt-1">Add CSC Center, PAN Card, Aadhaar, Passport & other official service links.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {govtServices.map((g) => (
+                  <Card key={g.id} className="bg-card border-border">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-muted grid place-items-center overflow-hidden border border-border shrink-0">
+                        {g.banner ? (
+                          <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${g.banner})` }} role="img" aria-label={g.name} />
+                        ) : (
+                          <Landmark className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white truncate">{g.name}</div>
+                        {g.website ? (
+                          <a href={g.website} target="_blank" rel="noopener noreferrer" className="text-[11px] text-accent hover:underline truncate block">{g.website}</a>
+                        ) : (
+                          <span className="text-[11px] text-red-400">No website set</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button size="sm" variant="outline" onClick={() => setEditingGovtService(g)} className="bg-background border-border h-7 px-2 text-[11px]">
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteGovtService(g.id, g.name)} className="bg-red-950/80 hover:bg-red-900 text-red-300 border-red-800/60 h-7 px-2 text-[11px]">
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================= */}
         {/* TAB: ADS & BANNERS MANAGEMENT */}
         {/* ========================================================= */}
         {activeTab === 'ads' && (
@@ -3607,7 +3682,7 @@ function AdminDashboardContent() {
       {/* ========================================================= */}
       {/* MODAL: ADD GOVERNMENT SERVICE */}
       {/* ========================================================= */}
-      <Dialog open={isAddGovtServiceOpen} onOpenChange={(open) => { setIsAddGovtServiceOpen(open); if (!open) setIsCustomGovtType(false); }}>
+      <Dialog open={isAddGovtServiceOpen} onOpenChange={setIsAddGovtServiceOpen}>
         <DialogContent className="dark bg-card border-border text-white max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
@@ -3631,52 +3706,20 @@ function AdminDashboardContent() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-foreground">Service Type *</label>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomGovtType(!isCustomGovtType)}
-                  className="text-[11px] text-primary hover:text-primary/80"
-                >
-                  {isCustomGovtType ? '← Choose from existing list' : '+ Add custom service type'}
-                </button>
-              </div>
-              {!isCustomGovtType ? (
-                <select
-                  value={newGovtService.categorySlug}
-                  onChange={(e) => setNewGovtService({ ...newGovtService, categorySlug: e.target.value })}
-                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-xs text-foreground"
-                >
-                  {categories.filter(c => c.group === 'Government Services').map((c) => (
-                    <option key={c.slug} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  value={newGovtService.customCategoryName}
-                  onChange={(e) => setNewGovtService({ ...newGovtService, customCategoryName: e.target.value })}
-                  placeholder="e.g., Ration Card Services"
-                  className="bg-background border-border text-xs text-white"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs text-foreground mb-1">Website Link</label>
+              <label className="block text-xs text-foreground mb-1">Service Website URL *</label>
               <Input
+                required
                 type="url"
                 value={newGovtService.website}
                 onChange={(e) => setNewGovtService({ ...newGovtService, website: e.target.value })}
                 placeholder="https://csc.gov.in"
                 className="bg-background border-border text-xs text-white"
               />
+              <p className="text-[11px] text-muted-foreground mt-1">Clicking this service on the site opens this website directly.</p>
             </div>
 
             <div>
               <label className="block text-xs text-foreground mb-1">Logo Upload</label>
-              {newGovtService.banner && (
-                <div className="mb-2 h-24 rounded-lg bg-cover bg-center border border-border" style={{ backgroundImage: `url(${newGovtService.banner})` }} />
-              )}
               <FileUploader
                 context="govt-service"
                 ownerId={user.id}
@@ -3688,10 +3731,16 @@ function AdminDashboardContent() {
                   }
                 }}
               />
+              {newGovtService.banner && (
+                <div className="mt-3 relative w-24 h-24 bg-cover bg-center rounded-lg border border-border">
+                  <img src={newGovtService.banner} alt="Logo preview" className="w-full h-full object-cover rounded-lg" />
+                  <button type="button" onClick={() => setNewGovtService(prev => ({ ...prev, banner: '' }))} className="absolute -top-2 -right-2 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full grid place-items-center"><X className="w-3.5 h-3.5" /></button>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="pt-3 border-t border-border">
-              <Button type="button" variant="outline" onClick={() => { setIsAddGovtServiceOpen(false); setIsCustomGovtType(false); }} className="bg-background border-border text-foreground text-xs">
+              <Button type="button" variant="outline" onClick={() => setIsAddGovtServiceOpen(false)} className="bg-background border-border text-foreground text-xs">
                 Cancel
               </Button>
               <Button type="submit" className="bg-primary hover:bg-primary/90 text-white text-xs">
@@ -3712,7 +3761,7 @@ function AdminDashboardContent() {
               <Landmark className="w-5 h-5 text-primary" /> Edit Government Service
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Update the service name, type, website link, or logo.
+              Update the service name, website link, or logo.
             </DialogDescription>
           </DialogHeader>
 
@@ -3729,21 +3778,9 @@ function AdminDashboardContent() {
               </div>
 
               <div>
-                <label className="block text-xs text-foreground mb-1">Service Type *</label>
-                <select
-                  value={editingGovtService.categorySlug || ''}
-                  onChange={(e) => setEditingGovtService({ ...editingGovtService, categorySlug: e.target.value })}
-                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-xs text-foreground"
-                >
-                  {categories.filter(c => c.group === 'Government Services').map((c) => (
-                    <option key={c.slug} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs text-foreground mb-1">Website Link</label>
+                <label className="block text-xs text-foreground mb-1">Service Website URL *</label>
                 <Input
+                  required
                   type="url"
                   value={editingGovtService.website || ''}
                   onChange={(e) => setEditingGovtService({ ...editingGovtService, website: e.target.value })}
@@ -3754,9 +3791,6 @@ function AdminDashboardContent() {
 
               <div>
                 <label className="block text-xs text-foreground mb-1">Logo Upload</label>
-                {editingGovtService.banner && (
-                  <div className="mb-2 h-24 rounded-lg bg-cover bg-center border border-border" style={{ backgroundImage: `url(${editingGovtService.banner})` }} />
-                )}
                 <FileUploader
                   context="govt-service"
                   ownerId={user.id}
@@ -3769,6 +3803,12 @@ function AdminDashboardContent() {
                     }
                   }}
                 />
+                {editingGovtService.banner && (
+                  <div className="mt-3 relative w-24 h-24 bg-cover bg-center rounded-lg border border-border">
+                    <img src={editingGovtService.banner} alt="Logo preview" className="w-full h-full object-cover rounded-lg" />
+                    <button type="button" onClick={() => setEditingGovtService(prev => ({ ...prev, banner: '' }))} className="absolute -top-2 -right-2 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full grid place-items-center"><X className="w-3.5 h-3.5" /></button>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="pt-3 border-t border-border">

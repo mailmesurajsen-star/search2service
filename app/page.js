@@ -13,7 +13,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { HeroSlider } from '@/components/hero-slider';
 import {
   MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
-  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone,
+  GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone, ExternalLink,
   Verified, Clock, HeartHandshake, Award, Building2, IndianRupee,
   Hospital, Cross, Smile, Eye, Hand, Ear, Bone, HeartPulse, Brain, Baby, Venus, Activity, TestTubes, Pill, Ambulance, Droplet,
   Palette, Scissors, UserRound, Flower2, Zap, Hammer, Paintbrush, AirVent, Refrigerator, WashingMachine, Droplets,
@@ -281,6 +281,36 @@ export default function App() {
               </CardContent>
             </Card>
           </div>
+
+          {gov.length > 0 && (
+            <div className="mt-10">
+              <SectionHeader title="Government Service Links" subtitle="Tap a service to go straight to its official website" icon={<Landmark className="w-5 h-5 text-accent" />} />
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mt-8">
+                {gov.map(g => (
+                  <a
+                    key={g.id}
+                    href={g.website || '#'}
+                    target={g.website ? '_blank' : undefined}
+                    rel={g.website ? 'noopener noreferrer' : undefined}
+                    onClick={(e) => { if (!g.website) e.preventDefault(); }}
+                    className="flex flex-col items-center text-center gap-2 p-4 rounded-xl border border-border hover:border-accent/40 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-muted grid place-items-center overflow-hidden border border-border group-hover:border-accent/40">
+                      {g.banner ? (
+                        <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${g.banner})` }} role="img" aria-label={g.name} />
+                      ) : (
+                        <Landmark className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold leading-snug group-hover:text-primary transition-colors flex items-center gap-1">
+                      {g.name}
+                      {g.website && <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
