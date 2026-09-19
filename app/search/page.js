@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { pricingVisible } from '@/lib/utils';
 import { Search, MapPin, Star, ShieldCheck, Phone, MessageCircle, Filter, SlidersHorizontal, ChevronLeft, IndianRupee, ExternalLink } from 'lucide-react';
 import { AdBanner } from '@/components/ad-banner';
 
@@ -199,7 +200,7 @@ function SearchInner() {
                             <span className="text-muted-foreground">({p.reviewCount} reviews)</span>
                           </div>
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2"><MapPin className="w-3 h-3" />{p.area}, {p.city}</div>
-                          {p.fees && <div className="text-xs text-muted-foreground mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
+                          {pricingVisible(p) && p.fees > 0 && <div className="text-xs text-muted-foreground mt-1 flex items-center">Consultation: <IndianRupee className="w-3 h-3" />{p.fees}</div>}
                           <div className="flex gap-2 mt-3">
                             <a href={`tel:${p.phone}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-primary/10 text-primary text-xs font-medium grid place-items-center hover:bg-primary/15"><Phone className="w-3 h-3 mr-1" />Call</a>
                             <a href={`https://wa.me/${p.whatsapp?.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()} className="flex-1 h-8 rounded bg-emerald-50 text-emerald-700 text-xs font-medium grid place-items-center hover:bg-emerald-100"><MessageCircle className="w-3 h-3 mr-1" />WhatsApp</a>

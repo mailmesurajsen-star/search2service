@@ -15,6 +15,8 @@ import {
   Award, CheckCircle2, Calendar, User, Send, Search
 } from 'lucide-react';
 
+import { pricingVisible } from '@/lib/utils';
+
 function buildProviderFaqSchema(p, isDoctor) {
   const qa = [];
 
@@ -40,12 +42,14 @@ function buildProviderFaqSchema(p, isDoctor) {
     ]);
   }
 
-  if (isDoctor && p.fees) {
+  const showPrice = pricingVisible(p);
+
+  if (showPrice && isDoctor && p.fees) {
     qa.push([
       `What is the consultation fee for ${p.name}?`,
       `${p.name}'s consultation fee is around ₹${p.fees}. Confirm the exact fee when booking.`,
     ]);
-  } else if (p.priceFrom || p.priceTo) {
+  } else if (showPrice && (p.priceFrom || p.priceTo)) {
     qa.push([
       `How much does ${p.name} charge?`,
       `${p.name}'s pricing typically ranges from ₹${p.priceFrom || 0} to ₹${p.priceTo || p.priceFrom || 0}, depending on the service.`,
@@ -264,7 +268,7 @@ export default function ProviderPage() {
               <TabsContent value="book" className="mt-4">
                 <Card><CardContent className="p-6">
                   <h3 className="font-bold text-lg mb-4">Book Appointment</h3>
-                  <BookingForm providerId={id} defaultFee={p.fees} isDoctor={true} timings={p.timings} />
+                  <BookingForm providerId={id} defaultFee={pricingVisible(p) ? p.fees : 0} isDoctor={true} timings={p.timings} />
                 </CardContent></Card>
               </TabsContent>
             )}

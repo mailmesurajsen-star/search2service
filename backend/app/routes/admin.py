@@ -1150,6 +1150,81 @@ async def test_whatsapp_gateway(payload: MessagingTestPayload, request: Request)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Gupshup request failed: {e}")
 
+# ---------------------------------------------------------
+# EMAIL NOTIFICATIONS (SMTP)
+# ---------------------------------------------------------
+class EmailConfigPayload(BaseModel):
+    enabled: Optional[bool] = False
+    smtpHost: Optional[str] = ""
+    smtpPort: Optional[int] = 587
+    useSsl: Optional[bool] = False
+    smtpUser: Optional[str] = ""
+    smtpPassword: Optional[str] = None
+    fromName: Optional[str] = "Search2Service"
+    fromEmail: Optional[str] = ""
+    notifyEmail: Optional[str] = ""
+
+class EmailTestPayload(BaseModel):
+    to: str
+
+@router.get("/email-config")
+async def get_email_config_admin(request: Request):
+    await require_admin(request)
+    cfg = await get_db().system_settings.find_one({"key": "email_config"}) or {
+        "enabled": False, "smtpHost": "", "smtpPort": 587, "useSsl": False, "smtpUser": "",
+        "fromName": "Search2Service", "fromEmail": "", "notifyEmail": "",
+    }
+    safe = clean_doc(cfg)
+    has_pw = bool(safe.get("smtpPassword"))
+    safe["smtpPassword"] = _mask_secret(safe["smtpPassword"]) if has_pw else ""
+    safe["hasPassword"] = has_pw
+    return {"settings": safe}
+
+@router.post("/email-config")
+async def save_email_config(payload: EmailConfigPayload, request: Request):
+    await require_admin(request)
+    db = get_db()
+    existing = await db.system_settings.find_one({"key": "email_config"}) or {}
+    doc = {
+        "key": "email_config",
+        "enabled": bool(payload.enabled),
+        "smtpHost": (payload.smtpHost or "").strip(),
+        "smtpPort": payload.smtpPort or 587,
+        "useSsl": bool(payload.useSsl),
+        "smtpUser": (payload.smtpUser or "").strip(),
+        "fromName": (payload.fromName or "Search2Service").strip(),
+        "fromEmail": (payload.fromEmail or "").strip(),
+        "notifyEmail": (payload.notifyEmail or "").strip(),
+        "updatedAt": datetime.utcnow().isoformat(),
+    }
+    # Only replace the password if a new one was typed (not the masked placeholder / blank).
+    if payload.smtpPassword and "•" not in payload.smtpPassword:
+        doc["smtpPassword"] = payload.smtpPassword
+    else:
+        doc["smtpPassword"] = existing.get("smtpPassword", "")
+    await db.system_settings.update_one({"key": "email_config"}, {"$set": doc}, upsert=True)
+    return {"ok": True}
+
+@router.post("/email-config/test")
+async def test_email_config(payload: EmailTestPayload, request: Request):
+    await require_admin(request)
+    from app.notify import send_email
+    cfg = await get_db().system_settings.find_one({"key": "email_config"})
+    if not cfg or not cfg.get("smtpHost"):
+        raise HTTPException(status_code=400, detail="Save your SMTP settings first")
+    try:
+        # Bypass the "enabled" switch so a test works before turning notifications on.
+        from app.notify import _send_blocking
+        import asyncio
+        await asyncio.to_thread(
+            _send_blocking, cfg, payload.to.strip(), "Search2Service test email",
+            "<p>This is a test email from your Search2Service Admin Console. SMTP is working.</p>",
+            "This is a test email from your Search2Service Admin Console. SMTP is working.",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not send: {e}")
+    return {"ok": True}
+
 @router.get("/billing")
 async def get_billing_transactions(request: Request, limit: int = Query(100, ge=1, le=500)):
     await require_admin(request)

@@ -262,6 +262,15 @@ function AdminDashboardContent() {
   const [testingSms, setTestingSms] = useState(false);
   const [testingWhatsapp, setTestingWhatsapp] = useState(false);
 
+  // Email notification (SMTP) settings
+  const [emailCfg, setEmailCfg] = useState({
+    enabled: false, smtpHost: '', smtpPort: 587, useSsl: false, smtpUser: '', smtpPassword: '',
+    fromName: 'Search2Service', fromEmail: '', notifyEmail: '', hasPassword: false,
+  });
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+
   // Hero Slider State
   const [heroSlides, setHeroSlides] = useState([]);
   const [loadingSlides, setLoadingSlides] = useState(false);
@@ -486,6 +495,11 @@ function AdminDashboardContent() {
       if (res.ok) {
         const data = await res.json();
         if (data.settings) setMessaging(prev => ({ ...prev, ...data.settings, msg91AuthKey: '', gupshupApiKey: '' }));
+      }
+      const er = await fetch('/api/admin/email-config');
+      if (er.ok) {
+        const ed = await er.json();
+        if (ed.settings) setEmailCfg(prev => ({ ...prev, ...ed.settings, smtpPassword: '' }));
       }
     } catch (e) {
       console.error(e);
@@ -1002,6 +1016,33 @@ function AdminDashboardContent() {
     } finally {
       setSavingMessaging(false);
     }
+  };
+
+  const handleSaveEmail = async (e) => {
+    e.preventDefault();
+    setSavingEmail(true);
+    try {
+      const res = await fetch('/api/admin/email-config', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(emailCfg),
+      });
+      if (res.ok) { toast.success('Email settings saved!'); fetchMessaging(); }
+      else { const d = await res.json().catch(() => ({})); toast.error(d.detail || 'Failed to save email settings'); }
+    } catch (err) { toast.error('Network error while saving email settings'); }
+    finally { setSavingEmail(false); }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmailTo.trim()) { toast.error('Enter an email address to send the test to'); return; }
+    setTestingEmail(true);
+    try {
+      const res = await fetch('/api/admin/email-config/test', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: testEmailTo }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) toast.success('Test email sent - check the inbox');
+      else toast.error(d.detail || 'Test email failed');
+    } catch (err) { toast.error('Network error while sending test email'); }
+    finally { setTestingEmail(false); }
   };
 
   const handleTestSms = async () => {
@@ -2868,6 +2909,68 @@ function AdminDashboardContent() {
                 </div>
               </CardContent>
             </Card>
+
+            <form onSubmit={handleSaveEmail} className="space-y-4 bg-card border border-border rounded-2xl p-6 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-white flex items-center gap-2"><Mail className="w-4 h-4 text-emerald-500" /> Email Notifications (SMTP)</h3>
+                <Badge className={emailCfg.enabled ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-muted text-muted-foreground border-border'} variant="outline">
+                  {emailCfg.enabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Sends emails for: new booking requests (to the provider and the customer), booking confirmed / completed / cancelled (to the customer),
+                and new contact-form messages (to the admin address below). Works with Gmail (use an App Password), Zoho, Brevo, Hostinger or any SMTP server.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">SMTP Host</label>
+                  <Input value={emailCfg.smtpHost} onChange={(e) => setEmailCfg({ ...emailCfg, smtpHost: e.target.value })} placeholder="smtp.gmail.com" className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Port</label>
+                  <Input type="number" value={emailCfg.smtpPort} onChange={(e) => setEmailCfg({ ...emailCfg, smtpPort: parseInt(e.target.value) || 587 })} className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">SMTP Username</label>
+                  <Input value={emailCfg.smtpUser} onChange={(e) => setEmailCfg({ ...emailCfg, smtpUser: e.target.value })} placeholder="you@gmail.com" className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">SMTP Password / App Password</label>
+                  <Input type="password" value={emailCfg.smtpPassword} onChange={(e) => setEmailCfg({ ...emailCfg, smtpPassword: e.target.value })} placeholder={emailCfg.hasPassword ? '•••••••• (leave blank to keep existing)' : 'Enter password'} className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">From Name</label>
+                  <Input value={emailCfg.fromName} onChange={(e) => setEmailCfg({ ...emailCfg, fromName: e.target.value })} className="bg-background border-border text-xs text-white" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">From Email</label>
+                  <Input value={emailCfg.fromEmail} onChange={(e) => setEmailCfg({ ...emailCfg, fromEmail: e.target.value })} placeholder="same as username if blank" className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1.5">Admin Notification Email</label>
+                  <Input value={emailCfg.notifyEmail} onChange={(e) => setEmailCfg({ ...emailCfg, notifyEmail: e.target.value })} placeholder="contact messages go here" className="bg-background border-border text-xs text-white font-mono" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 pt-1">
+                <label className="flex items-center gap-3 text-xs text-foreground cursor-pointer">
+                  <input type="checkbox" checked={emailCfg.useSsl} onChange={(e) => setEmailCfg({ ...emailCfg, useSsl: e.target.checked })} className="w-4 h-4 rounded bg-background border-border focus:ring-0" />
+                  Use SSL (port 465). Leave off for STARTTLS (port 587).
+                </label>
+                <label className="flex items-center gap-3 text-xs text-foreground cursor-pointer">
+                  <input type="checkbox" checked={emailCfg.enabled} onChange={(e) => setEmailCfg({ ...emailCfg, enabled: e.target.checked })} className="w-4 h-4 rounded bg-background border-border focus:ring-0" />
+                  Enable email notifications
+                </label>
+              </div>
+              <div className="pt-4 border-t border-border flex flex-wrap items-center gap-3">
+                <Button type="submit" disabled={savingEmail} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5">
+                  <Save className="w-3.5 h-3.5" /> {savingEmail ? 'Saving...' : 'Save Email Settings'}
+                </Button>
+                <Input value={testEmailTo} onChange={(e) => setTestEmailTo(e.target.value)} placeholder="send test to: you@example.com" className="bg-background border-border text-xs text-white max-w-[240px]" />
+                <Button type="button" variant="outline" disabled={testingEmail} onClick={handleTestEmail} className="bg-background border-border text-xs gap-1.5">
+                  <Send className="w-3.5 h-3.5" /> {testingEmail ? 'Sending...' : 'Send Test Email'}
+                </Button>
+              </div>
+            </form>
           </div>
         )}
 

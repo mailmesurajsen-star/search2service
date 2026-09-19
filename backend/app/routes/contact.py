@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.db import get_db
+from app.notify import send_email_background, admin_notify_address
 
 router = APIRouter(prefix="/api", tags=["contact"])
 
@@ -33,4 +34,9 @@ async def submit_contact_message(payload: ContactPayload):
         "createdAt": datetime.utcnow().isoformat(),
     }
     await db.contact_messages.insert_one(doc)
+    send_email_background(await admin_notify_address(), f"New contact message: {doc['subject']}", [
+        f"From: {doc['name']} <{doc['email']}>",
+        f"Subject: {doc['subject']}",
+        doc["message"],
+    ])
     return {"ok": True}

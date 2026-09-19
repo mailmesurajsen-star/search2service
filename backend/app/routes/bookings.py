@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.db import get_db, clean_doc
 from app.auth import get_current_user
+from app.notify import send_email_background
 
 router = APIRouter(prefix="/api", tags=["bookings"])
 
@@ -40,4 +41,25 @@ async def create_booking(payload: CreateBookingPayload, request: Request):
     }
     
     await db.bookings.insert_one(doc)
+
+    # Email notifications (no-ops unless SMTP is configured & enabled in Admin Console)
+    provider = await db.providers.find_one({"id": payload.providerId}) or {}
+    biz_name = provider.get("name", "your business")
+    when = " ".join(x for x in [doc["date"], f"({doc['slot']})" if doc["slot"] else ""] if x) or "not specified"
+    owner = await db.users.find_one({"id": provider.get("ownerId")}) if provider.get("ownerId") else None
+    provider_email = provider.get("email") or (owner or {}).get("email", "")
+    send_email_background(provider_email, f"New booking request - {biz_name}", [
+        f"You have a new booking request for {biz_name}.",
+        f"Customer: {doc['customerName']}" + (f" ({doc['customerPhone']})" if doc["customerPhone"] else ""),
+        f"Service: {doc['service'] or 'not specified'}",
+        f"Preferred time: {when}",
+        f"Note: {doc['note']}" if doc["note"] else "Open your Provider Portal > Bookings to confirm or decline.",
+    ])
+    if user and user.get("email"):
+        send_email_background(user["email"], f"Booking request sent - {biz_name}", [
+            f"Hi {doc['customerName']}, your booking request with {biz_name} has been received.",
+            f"Service: {doc['service'] or 'not specified'}",
+            f"Preferred time: {when}",
+            "The provider will confirm shortly. You will get another email when the status changes.",
+        ])
     return {"ok": True, "booking": clean_doc(doc)}

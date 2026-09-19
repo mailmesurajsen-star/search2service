@@ -11,6 +11,7 @@ import { AdBanner } from '@/components/ad-banner';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { HeroSlider } from '@/components/hero-slider';
+import { pricingVisible } from '@/lib/utils';
 import {
   MapPin, Star, ShieldCheck, Phone, MessageCircle, Stethoscope, Sparkles, Wrench, Cpu, Camera, Utensils,
   GraduationCap, Printer, Briefcase, Home, Plane, Dog, Landmark, Scale, ChevronRight, Download, Smartphone, ExternalLink,
@@ -223,7 +224,7 @@ export default function App() {
                     <div className="text-xs text-muted-foreground mt-1">{d.qualification} • {d.experience}+ yrs exp</div>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-1 text-sm"><Star className="w-4 h-4 fill-[#F5A623] text-[#F5A623]" /><span className="font-semibold">{d.rating}</span><span className="text-muted-foreground">({d.reviewCount})</span></div>
-                      <div className="text-sm font-bold flex items-center"><IndianRupee className="w-3.5 h-3.5" />{d.fees}</div>
+                      {pricingVisible(d) && d.fees > 0 && <div className="text-sm font-bold flex items-center"><IndianRupee className="w-3.5 h-3.5" />{d.fees}</div>}
                     </div>
                     <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1"><MapPin className="w-3 h-3" />{d.city}</div>
                   </CardContent>

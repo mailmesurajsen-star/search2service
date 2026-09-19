@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/use-auth';
 import { FileUploader } from '@/components/file-uploader';
+import { pricingVisible } from '@/lib/utils';
 import { ChevronLeft, Save, Store, MapPin, Phone, Mail, Globe, Clock, IndianRupee, CreditCard, Wallet, X, PlusCircle, Sparkles, Map, Wand2, Briefcase, Trash2, Loader2, Check, Lock, Crown } from 'lucide-react';
 
 const PAYMENT_METHODS = ['UPI', 'Cash', 'Card', 'Net Banking', 'Razorpay', 'PayTM', 'PhonePe', 'Google Pay'];
@@ -25,7 +26,7 @@ export default function BusinessProfilePage() {
   const [b, setB] = useState({
     name: '', description: '', categorySlug: '', state: '', district: '', city: '', area: '', address: '',
     phone: '', whatsapp: '', email: '', website: '',
-    services: [], priceFrom: '', priceTo: '', fees: '',
+    services: [], showPricing: false, priceFrom: '', priceTo: '', fees: '',
     offers: [], upi: '', razorpayKeyId: '', paymentMethods: ['UPI', 'Cash'],
     banner: '', images: [],
     timings: { days: 'Mon - Sat', morning: '09:00 AM - 01:00 PM', evening: '05:00 PM - 09:00 PM', holiday: 'Sunday', open: '09:00 AM', close: '09:00 PM' },
@@ -50,7 +51,7 @@ export default function BusinessProfilePage() {
   useEffect(() => {
     fetch('/api/categories').then(r => r.json()).then(d => setCats(d.categories || []));
     fetch('/api/locations').then(r => r.json()).then(setLocs);
-    fetch('/api/provider/business').then(r => r.json()).then(d => { if (d.business) setB(prev => ({ ...prev, ...d.business, priceFrom: d.business.priceFrom || '', priceTo: d.business.priceTo || '', fees: d.business.fees || '', experience: d.business.experience || '', location: d.business.location || prev.location })); });
+    fetch('/api/provider/business').then(r => r.json()).then(d => { if (d.business) setB(prev => ({ ...prev, ...d.business, showPricing: pricingVisible(d.business), priceFrom: d.business.priceFrom || '', priceTo: d.business.priceTo || '', fees: d.business.fees || '', experience: d.business.experience || '', location: d.business.location || prev.location })); });
     fetchJobs();
   }, []);
 
@@ -309,10 +310,26 @@ export default function BusinessProfilePage() {
               ))}
             </div>
           </div>
-          <div className="grid sm:grid-cols-3 gap-3">
-            <div><Label>Price From (₹)</Label><Input className="mt-1" type="number" value={b.priceFrom} onChange={e => setB({ ...b, priceFrom: e.target.value })} /></div>
-            <div><Label>Price To (₹)</Label><Input className="mt-1" type="number" value={b.priceTo} onChange={e => setB({ ...b, priceTo: e.target.value })} /></div>
-            {isDoctor && <div><Label>Consultation Fee (₹)</Label><Input className="mt-1" type="number" value={b.fees} onChange={e => setB({ ...b, fees: e.target.value })} /></div>}
+          <div className="rounded-lg border border-border p-3 space-y-3">
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!b.showPricing}
+                onChange={e => setB({ ...b, showPricing: e.target.checked })}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-[#0E9384]"
+              />
+              <span>
+                <span className="text-sm font-semibold">Show pricing on my profile</span>
+                <span className="block text-xs text-muted-foreground">Tick this to add your pricing. If left unticked, no pricing is shown to customers.</span>
+              </span>
+            </label>
+            {b.showPricing && (
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div><Label>Price From (₹)</Label><Input className="mt-1" type="number" value={b.priceFrom} onChange={e => setB({ ...b, priceFrom: e.target.value })} /></div>
+                <div><Label>Price To (₹)</Label><Input className="mt-1" type="number" value={b.priceTo} onChange={e => setB({ ...b, priceTo: e.target.value })} /></div>
+                {isDoctor && <div><Label>Consultation Fee (₹)</Label><Input className="mt-1" type="number" value={b.fees} onChange={e => setB({ ...b, fees: e.target.value })} /></div>}
+              </div>
+            )}
           </div>
           <div>
             <Label>Offers / Discounts</Label>

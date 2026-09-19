@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request, HTTPException, status
 from pydantic import BaseModel
 from app.db import get_db, delete_upload, clean_doc
 from app.auth import get_current_user
+from app.notify import send_email_background
 from app.config import EMERGENT_LLM_KEY, GEMINI_MODEL
 
 router = APIRouter(prefix="/api/provider", tags=["provider_portal"])
@@ -51,6 +52,7 @@ class BusinessPayload(BaseModel):
     email: Optional[str] = None
     website: Optional[str] = None
     services: Optional[List[str]] = None
+    showPricing: Optional[bool] = None
     priceFrom: Optional[Any] = None
     priceTo: Optional[Any] = None
     fees: Optional[Any] = None
@@ -356,6 +358,19 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
         razorpay_val = b_dict.get("razorpayKeyId", existing.get("razorpayKeyId", "") if existing else "")
         payment_methods_val = b_dict.get("paymentMethods", existing.get("paymentMethods", ["UPI", "Cash"]) if existing else ["UPI", "Cash"])
 
+    # Pricing is opt-in: only shown on the public profile when the provider ticks
+    # "Show pricing". Older listings saved before this option existed keep showing
+    # pricing if they already had a price set. The entered prices are always kept,
+    # so un-ticking and re-ticking doesn't lose them.
+    if b_dict.get("showPricing") is not None:
+        show_pricing = bool(b_dict["showPricing"])
+    elif existing and existing.get("showPricing") is not None:
+        show_pricing = bool(existing["showPricing"])
+    elif existing:
+        show_pricing = bool(existing.get("priceFrom") or existing.get("priceTo") or existing.get("fees"))
+    else:
+        show_pricing = False
+
     doc = {
         "id": existing.get("id") if existing else str(uuid.uuid4()),
         "ownerId": user["id"],
@@ -376,6 +391,7 @@ async def save_provider_business(payload: BusinessPayload, request: Request):
         "email": b_dict.get("email", existing.get("email", user.get("email", "")) if existing else user.get("email", "")),
         "website": b_dict.get("website", existing.get("website", "") if existing else ""),
         "services": [s for s in b_dict.get("services", existing.get("services", []) if existing else []) if s][:20],
+        "showPricing": show_pricing,
         "priceFrom": parse_int(b_dict.get("priceFrom"), existing.get("priceFrom", 0) if existing else 0),
         "priceTo": parse_int(b_dict.get("priceTo"), existing.get("priceTo", 0) if existing else 0),
         "fees": parse_int(b_dict.get("fees"), existing.get("fees", 0) if existing else 0),
@@ -489,6 +505,17 @@ async def update_booking_status(booking_id: str, payload: BookingStatusPayload, 
         {"id": booking_id},
         {"$set": {"status": payload.status, "updatedAt": datetime.utcnow().isoformat()}}
     )
+
+    booking = await db.bookings.find_one({"id": booking_id})
+    customer = await db.users.find_one({"id": booking.get("customerId")}) if booking and booking.get("customerId") else None
+    if customer and customer.get("email") and payload.status in ("confirmed", "completed", "cancelled"):
+        provider = await db.providers.find_one({"id": booking.get("providerId")}) or {}
+        biz = provider.get("name", "the provider")
+        send_email_background(customer["email"], f"Your booking with {biz} is {payload.status}", [
+            f"Hi {booking.get('customerName', '')}, your booking with {biz} is now {payload.status}.",
+            f"Service: {booking.get('service') or 'not specified'}",
+            f"Preferred time: {booking.get('date') or 'not specified'}",
+        ])
     return {"ok": True}
 
 @router.get("/analytics")
