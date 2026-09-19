@@ -5,6 +5,10 @@ from app.db import get_db, clean_doc
 
 router = APIRouter(prefix="/api", tags=["providers"])
 
+# Only listings the admin has left "active" are public. Suspended / pending ones are hidden.
+# Older listings saved without a status count as active.
+PUBLIC_STATUS = {"$in": ["active", None]}
+
 @router.get("/providers")
 async def get_providers(
     category: Optional[str] = Query(None),
@@ -21,7 +25,7 @@ async def get_providers(
     skip: int = Query(0, ge=0)
 ):
     db = get_db()
-    query_filter = {}
+    query_filter = {"status": PUBLIC_STATUS}
     
     if category:
         query_filter["categorySlug"] = category
@@ -69,7 +73,7 @@ async def get_doctors(
     limit: int = Query(8, ge=1, le=100)
 ):
     db = get_db()
-    query_filter = {"specialization": {"$ne": None}}
+    query_filter = {"specialization": {"$ne": None}, "status": PUBLIC_STATUS}
     if featured == "true":
         query_filter["featured"] = True
         
@@ -81,7 +85,7 @@ async def get_hotels(
     limit: int = Query(6, ge=1, le=100)
 ):
     db = get_db()
-    items = await db.providers.find({"categorySlug": "hotel"}).sort([("rating", -1)]).limit(limit).to_list(length=limit)
+    items = await db.providers.find({"categorySlug": "hotel", "status": PUBLIC_STATUS}).sort([("rating", -1)]).limit(limit).to_list(length=limit)
     return {"items": clean_doc(items)}
 
 @router.get("/restaurants")
@@ -89,24 +93,24 @@ async def get_restaurants(
     limit: int = Query(6, ge=1, le=100)
 ):
     db = get_db()
-    items = await db.providers.find({"categorySlug": "restaurant"}).sort([("rating", -1)]).limit(limit).to_list(length=limit)
+    items = await db.providers.find({"categorySlug": "restaurant", "status": PUBLIC_STATUS}).sort([("rating", -1)]).limit(limit).to_list(length=limit)
     return {"items": clean_doc(items)}
 
 @router.get("/gov-services")
 async def get_gov_services():
     db = get_db()
-    items = await db.providers.find({"group": "Government Services"}).sort([("rating", -1)]).limit(6).to_list(length=6)
+    items = await db.providers.find({"group": "Government Services", "status": PUBLIC_STATUS}).sort([("rating", -1)]).limit(6).to_list(length=6)
     return {"items": clean_doc(items)}
 
 @router.get("/providers/{provider_id}")
 async def get_provider_by_id(provider_id: str):
     db = get_db()
     p = await db.providers.find_one({"id": provider_id})
-    if not p:
+    if not p or p.get("status") not in ("active", None):
         raise HTTPException(status_code=404, detail="not found")
         
     reviews = await db.reviews.find({"providerId": provider_id}).sort([("createdAt", -1)]).limit(20).to_list(length=20)
-    similar = await db.providers.find({"categorySlug": p.get("categorySlug"), "id": {"$ne": provider_id}}).limit(4).to_list(length=4)
+    similar = await db.providers.find({"categorySlug": p.get("categorySlug"), "id": {"$ne": provider_id}, "status": PUBLIC_STATUS}).limit(4).to_list(length=4)
     
     return {
         "provider": clean_doc(p),

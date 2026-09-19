@@ -591,11 +591,21 @@ function AdminDashboardContent() {
         body: JSON.stringify(updates),
       });
       if (res.ok) {
+        toast.success(
+          updates.status ? `Status changed to ${updates.status}`
+          : 'verified' in updates ? (updates.verified ? 'Marked as verified' : 'Verification removed')
+          : 'featured' in updates ? (updates.featured ? 'Marked as featured' : 'Removed from featured')
+          : 'Provider updated'
+        );
         fetchProviders();
         fetchOverviewStats();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.detail || data.error || 'Failed to update provider');
       }
     } catch (e) {
       console.error(e);
+      toast.error('Network error while updating provider');
     }
   };
 
@@ -1653,15 +1663,22 @@ function AdminDashboardContent() {
 
                           {/* Status */}
                           <td className="py-3 px-4">
-                            <Badge className={`text-[10px] uppercase font-bold ${
-                              p.status === 'active'
-                                ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                                : p.status === 'pending'
-                                ? 'bg-amber-950 text-amber-400 border-amber-800'
-                                : 'bg-red-950 text-red-400 border-red-800'
-                            }`}>
-                              {p.status || 'active'}
-                            </Badge>
+                            <select
+                              value={p.status || 'active'}
+                              onChange={(e) => handleUpdateProviderStatus(p.id, { status: e.target.value })}
+                              title="Change listing status"
+                              className={`rounded-md border px-2 py-1 text-[11px] uppercase font-bold cursor-pointer focus:outline-none ${
+                                (p.status || 'active') === 'active'
+                                  ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                                  : p.status === 'pending'
+                                  ? 'bg-amber-950 text-amber-400 border-amber-800'
+                                  : 'bg-red-950 text-red-400 border-red-800'
+                              }`}
+                            >
+                              <option value="active">Active</option>
+                              <option value="pending">Pending</option>
+                              <option value="suspended">Suspended</option>
+                            </select>
                           </td>
 
                           {/* Verified Toggle */}

@@ -48,7 +48,7 @@ async def chat_handler(payload: ChatPayload):
     unique_cities = list(set(p.get("city") for p in all_providers_cities if p.get("city")))
     matched_city = next((c for c in unique_cities if c.lower() in lower), None)
     
-    provider_filter = {}
+    provider_filter = {"status": {"$in": ["active", None]}}
     if matched_cats:
         provider_filter["categorySlug"] = {"$in": [c["slug"] for c in matched_cats]}
     if matched_city:
